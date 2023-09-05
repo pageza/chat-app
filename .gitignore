@@ -1,0 +1,59 @@
+# Compiled Object files, Static and Dynamic libs (Shared Objects)
+*.o
+*.a
+*.so
+
+# Folders
+_obj
+_test
+
+# Architecture specific extensions/prefixes
+*.[568vq]
+[568vq].out
+
+*.cgo1.go
+*.cgo2.c
+_cgo_defun.c
+_cgo_gotypes.go
+_cgo_export.*
+
+_testmain.go
+
+# IDE files
+.idea/
+*.swp
+*.swo
+*.swn
+*.swm
+*.swo
+*.swp
+
+# Log files
+*.log
+
+# Dependency directories
+vendor/
+
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
+.glide/
+
+# Visual Studio Code directories
+.vscode/
+
+# JetBrains IDE
+.idea/
+
+# GoLand IDE
+*.iml
+
+# Executables
+main
