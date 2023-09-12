@@ -95,8 +95,12 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		Value:    tokenString,
 		HttpOnly: true,
 	})
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "User successfully logged in")
+	// Create a JSON response
+	jsonResponse := map[string]string{"token": tokenString}
+
+	// Serialize and send the JSON response
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(jsonResponse)
 
 }
 
@@ -153,15 +157,16 @@ func ReceiveMessageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Receive message endpoint")
 }
 func main() {
-	// Initialize the router
-	r := mux.NewRouter()
 
 	// Initialize CORS middleware
 	c := cors.New(cors.Options{
+		// AllowedOrigins: []string{"*"}, // Allow all origins
 		AllowedOrigins:   []string{"http://localhost:8080"}, // replace with your frontend application's URL
 		AllowCredentials: true,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
 	})
+	// Initialize the router
+	r := mux.NewRouter()
 
 	handler := c.Handler(r)
 

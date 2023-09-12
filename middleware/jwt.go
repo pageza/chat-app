@@ -2,19 +2,29 @@ package middleware
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/pageza/chat-app/models"
 )
 
 func GenerateToken(user models.User) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"username": user.Username,
-		"email":    user.Email,
-	})
+	// Set token expiration time, e.g., 1 hour from now
+	expirationTime := time.Now().Add(1 * time.Hour).Unix()
 
+	claims := &jwt.StandardClaims{
+		// Set the expiration time
+		ExpiresAt: expirationTime,
+		// Add other claims
+		Issuer:  "veterans-app",
+		Subject: user.Username,
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString([]byte("your_secret_key"))
+
 	return tokenString, err
 }
 
@@ -33,7 +43,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		claims := &jwt.StandardClaims{}
 		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
 			// Replace "YourSigningKey" with your actual signing key
-			return []byte("YourSigningKey"), nil
+			return []byte("your_secret_key"), nil
 		})
 
 		if err != nil || !token.Valid {
@@ -47,6 +57,19 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 // CheckAuth checks if a user is logged in and responds with a JSON object.
 func CheckAuth(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Received request for CheckAuth from %s", r.RemoteAddr) // Log incoming request
+
+	// Setting Headers manually for debugging
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+	w.Header().Set("Access-Control-Allow-Credentials", "true") // This allows cookies
+
+	// Handle preflight request. Needed for CORS support to work.
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	// Get token from cookie
 	cookie, err := r.Cookie("token")
 	if err != nil {
@@ -59,42 +82,15 @@ func CheckAuth(w http.ResponseWriter, r *http.Request) {
 	claims := &jwt.StandardClaims{}
 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
 		// Replace "YourSigningKey" with your actual signing key
-		return []byte("YourSigningKey"), nil
+		return []byte("your_secret_key"), nil
 	})
 
 	if err != nil || !token.Valid {
+		log.Printf("Error: %s", err.Error()) // Log error
+
 		json.NewEncoder(w).Encode(map[string]bool{"authenticated": false})
 		return
 	}
 
 	json.NewEncoder(w).Encode(map[string]bool{"authenticated": true})
 }
-
-// Old way of making sure its the right user
-// func ValidateMiddleware(next http.HandlerFunc) http.HandlerFunc {
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		authorizationHeader := r.Header.Get("Authorization")
-// 		if authorizationHeader == "" {
-// 			http.Error(w, "Authorization header required", http.StatusUnauthorized)
-// 			return
-// 		}
-
-// 		tokenString := strings.Split(authorizationHeader, " ")[1]
-// 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-// 			return []byte("your_secret_key"), nil
-// 		})
-
-// 		if err != nil {
-// 			http.Error(w, "Invalid token", http.StatusUnauthorized)
-// 			return
-// 		}
-
-// 		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-// 			r.Header.Set("username", claims["username"].(string))
-// 			r.Header.Set("email", claims["email"].(string))
-// 			next.ServeHTTP(w, r)
-// 		} else {
-// 			http.Error(w, "Invalid token", http.StatusUnauthorized)
-// 		}
-// 	})
-// }
