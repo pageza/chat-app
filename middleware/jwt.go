@@ -59,11 +59,11 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 func CheckAuth(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Received request for CheckAuth from %s", r.RemoteAddr) // Log incoming request
 
-	// Setting Headers manually for debugging
-	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-	w.Header().Set("Access-Control-Allow-Credentials", "true") // This allows cookies
+	// // Setting Headers manually for debugging
+	// w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
+	// w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	// w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+	// w.Header().Set("Access-Control-Allow-Credentials", "true") // This allows cookies
 
 	// Handle preflight request. Needed for CORS support to work.
 	if r.Method == "OPTIONS" {

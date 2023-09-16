@@ -164,6 +164,7 @@ func main() {
 		AllowedOrigins:   []string{"http://localhost:8080"}, // replace with your frontend application's URL
 		AllowCredentials: true,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"}, // Add this line
 	})
 	// Initialize the router
 	r := mux.NewRouter()
@@ -186,3 +187,5 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8888", handler))
 
 }
+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
+git remote set-url origin https://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@github.com/pageza/chat-app-vue.git
