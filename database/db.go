@@ -2,6 +2,7 @@ package database
 
 import (
 	"log"
+	"os"
 
 	_ "github.com/lib/pq"
 	"github.com/pageza/chat-app/models"
@@ -13,7 +14,7 @@ var DB *gorm.DB
 
 func init() {
 	var err error
-	dsn := "host=localhost user=zach password=secret dbname=chat-app port=5432 sslmode=disable"
+	dsn := os.Getenv("POSTGRE_DSN")
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal(err)
