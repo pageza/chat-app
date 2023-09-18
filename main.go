@@ -1,15 +1,21 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
+	"time"
 
+	"github.com/dgrijalva/jwt-go"
+	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
 	"github.com/pageza/chat-app/database"
 	"github.com/pageza/chat-app/middleware"
 	"github.com/pageza/chat-app/models"
+
 	"github.com/rs/cors"
 
 	"golang.org/x/crypto/bcrypt"
@@ -105,7 +111,54 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // LogoutHandler handles user logout
-func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+func LogoutHandler(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
+	// Check if request object is nil
+	if r == nil {
+		http.Error(w, "Request is nil", http.StatusInternalServerError)
+		return
+	}
+
+	// Check if Redis client is initialized
+	if rdb == nil {
+		http.Error(w, "Redis client is not initialized", http.StatusInternalServerError)
+		return
+	}
+	// Extracting the token from the request header
+	tokenString := r.Header.Get("Authorization")
+	fmt.Println("Recieved Token:", tokenString)
+	actualToken := strings.TrimPrefix(tokenString, "Bearer ")
+	// Parse the token
+	token, err := jwt.Parse(actualToken, func(token *jwt.Token) (interface{}, error) {
+		// Validate the alg
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte("your_secret_key"), nil
+	})
+
+	if err != nil {
+		fmt.Println("Token validation failed: ", err)
+		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	// Extract expiration time from the token
+	expirationTime := int64(claims["exp"].(float64))
+
+	// Adding the token to the blacklist
+	err = rdb.Set(context.TODO(), tokenString, "blacklisted", time.Until(time.Unix(expirationTime, 0))).Err()
+	if err != nil {
+		fmt.Println("failed to blacklist token", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
 		Value:    "",
@@ -166,6 +219,11 @@ func main() {
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
 		AllowedHeaders:   []string{"Content-Type", "Authorization"}, // Add this line
 	})
+
+	// Get Redis client
+	middleware.InitializeRedis()
+	rdb := middleware.GetRedisClient()
+
 	// Initialize the router
 	r := mux.NewRouter()
 
@@ -176,7 +234,9 @@ func main() {
 	r.HandleFunc("/chat", ChatHandler).Methods("GET")
 	r.HandleFunc("/register", RegisterHandler).Methods("POST")
 	r.HandleFunc("/login", LoginHandler).Methods("POST")
-	r.HandleFunc("/logout", LogoutHandler).Methods("POST")
+	r.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
+		LogoutHandler(w, r, rdb)
+	}).Methods("POST")
 	r.HandleFunc("/send", SendMessageHandler).Methods("POST")
 	r.HandleFunc("/receive", ReceiveMessageHandler).Methods("GET")
 	r.HandleFunc("/userinfo", middleware.AuthMiddleware(UserInfoHandler)).Methods("GET")
@@ -187,5 +247,3 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8888", handler))
 
 }
-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
-git remote set-url origin https://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@github.com/pageza/chat-app-vue.git

@@ -1,12 +1,14 @@
 package middleware
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/go-redis/redis/v8"
 	"github.com/pageza/chat-app/models"
 )
 
@@ -28,6 +30,25 @@ func GenerateToken(user models.User) (string, error) {
 	return tokenString, err
 }
 
+// Initializing Redis for token blacklisting
+var rdb *redis.Client
+
+func InitializeRedis() {
+	rdb = redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+	})
+	// Ping the Redis server to check if it's up
+	_, err := rdb.Ping(context.TODO()).Result()
+	if err != nil {
+		log.Fatalf("Could not connect to Redis: %v", err)
+	} else {
+		log.Println("Successfully connected to Redis")
+	}
+}
+func GetRedisClient() *redis.Client {
+	return rdb
+}
+
 // AuthMiddleware checks for a valid JWT token in the HttpOnly cookie
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +58,12 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			http.Error(w, "Missing auth token", http.StatusUnauthorized)
 			return
 		}
-
+		// Check if token is blacklisted
+		isBlacklisted, err := rdb.Get(context.TODO(), cookie.Value).Result()
+		if err == nil && isBlacklisted == "blacklisted" {
+			http.Error(w, "Token is blacklisted", http.StatusUnauthorized)
+			return
+		}
 		// Parse token
 		tokenStr := cookie.Value
 		claims := &jwt.StandardClaims{}
@@ -58,12 +84,6 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 // CheckAuth checks if a user is logged in and responds with a JSON object.
 func CheckAuth(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Received request for CheckAuth from %s", r.RemoteAddr) // Log incoming request
-
-	// // Setting Headers manually for debugging
-	// w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
-	// w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	// w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-	// w.Header().Set("Access-Control-Allow-Credentials", "true") // This allows cookies
 
 	// Handle preflight request. Needed for CORS support to work.
 	if r.Method == "OPTIONS" {
