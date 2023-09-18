@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -91,28 +92,29 @@ func GetRedisClient() *redis.Client {
 // AuthMiddleware checks for a valid JWT token in the HttpOnly cookie
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Get token from cookie
 		cookie, err := r.Cookie("token")
 		if err != nil {
-			http.Error(w, "Missing auth token", http.StatusUnauthorized)
+			log.Println("Missing auth token")
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
-		// Check if token is blacklisted
+
 		isBlacklisted, err := rdb.Get(context.TODO(), cookie.Value).Result()
 		if err == nil && isBlacklisted == "blacklisted" {
-			http.Error(w, "Token is blacklisted", http.StatusUnauthorized)
+			log.Println("Token is blacklisted")
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
-		// Parse token
+
 		tokenStr := cookie.Value
 		claims := &jwt.StandardClaims{}
 		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-			// Replace "YourSigningKey" with your actual signing key
 			return []byte(jwtSecret), nil
 		})
 
 		if err != nil || !token.Valid {
-			http.Error(w, "Invalid auth token", http.StatusUnauthorized)
+			log.Printf("Invalid auth token: %s", err)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
@@ -120,36 +122,57 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	})
 }
 
-// CheckAuth checks if a user is logged in and responds with a JSON object.
 func CheckAuth(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Received request for CheckAuth from %s", r.RemoteAddr) // Log incoming request
+	log.Printf("Received request for CheckAuth from %s", r.RemoteAddr)
 
-	// Handle preflight request. Needed for CORS support to work.
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	// Get token from cookie
+
 	cookie, err := r.Cookie("token")
 	if err != nil {
+		log.Printf("Error: %s", err.Error())
 		json.NewEncoder(w).Encode(map[string]bool{"authenticated": false})
 		return
 	}
 
-	// Parse token
 	tokenStr := cookie.Value
 	claims := &jwt.StandardClaims{}
 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-		// Replace "YourSigningKey" with your actual signing key
 		return []byte(jwtSecret), nil
 	})
 
 	if err != nil || !token.Valid {
-		log.Printf("Error: %s", err.Error()) // Log error
-
+		log.Printf("Error: %s", err.Error())
 		json.NewEncoder(w).Encode(map[string]bool{"authenticated": false})
 		return
 	}
 
 	json.NewEncoder(w).Encode(map[string]bool{"authenticated": true})
+}
+
+// Implementing Rate limiting
+var (
+	limiter = make(map[string]time.Time)
+	mu      sync.Mutex
+)
+
+// RateLimitMiddleware rate limits requests
+func RateLimitMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+
+		ip := r.RemoteAddr
+		lastRequestTime, exists := limiter[ip]
+
+		if exists && time.Since(lastRequestTime) < 1*time.Second {
+			http.Error(w, "Too many requests", http.StatusTooManyRequests)
+			return
+		}
+
+		limiter[ip] = time.Now()
+		next.ServeHTTP(w, r)
+	})
 }

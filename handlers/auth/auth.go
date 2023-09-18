@@ -22,6 +22,11 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		helpers.HandleError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	// Validate the user
+	if err := user.Validate(); err != nil {
+		helpers.HandleError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -53,6 +58,12 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
+		helpers.HandleError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Validate the user
+	if err := user.Validate(); err != nil {
 		helpers.HandleError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -95,6 +106,11 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 
 	tokenString := r.Header.Get("Authorization")
 	actualToken := strings.TrimPrefix(tokenString, "Bearer ")
+
+	if actualToken == "" || actualToken == tokenString {
+		helpers.HandleError(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		return
+	}
 
 	token, err := helpers.ParseToken(actualToken)
 	if err != nil {
