@@ -9,7 +9,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/go-redis/redis/v8"
-	"github.com/pageza/chat-app/internal/middleware"
+	"github.com/pageza/chat-app/internal/common"
 	"github.com/pageza/chat-app/internal/models"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -27,9 +27,7 @@ func SetTokenCookie(w http.ResponseWriter, token string) {
 		HttpOnly: true,
 	})
 }
-func HandleError(w http.ResponseWriter, message string, statusCode int) {
-	http.Error(w, message, statusCode)
-}
+
 func ParseToken(tokenString string) (*jwt.Token, error) {
 	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// Validate the alg
@@ -51,9 +49,10 @@ func SendJSONResponse(w http.ResponseWriter, statusCode int, payload interface{}
 }
 
 func GenerateTokenAndSetCookie(w http.ResponseWriter, user models.User) {
-	tokenString, err := middleware.GenerateToken(user)
+	tokenString, err := common.GenerateToken(user)
 	if err != nil {
-		HandleError(w, "Could not log in", http.StatusInternalServerError)
+		apiErr := &APIError{Message: "Could not log in", Status: http.StatusInternalServerError}
+		RespondWithError(w, apiErr)
 		return
 	}
 	SetTokenCookie(w, tokenString)

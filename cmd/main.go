@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	"github.com/pageza/chat-app/internal/common"
 	"github.com/pageza/chat-app/internal/middleware"
 	"github.com/pageza/chat-app/internal/routes"
 
@@ -21,7 +22,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-	middleware.Initialize()
+	common.Initialize()
 
 	// Read environment variables
 	corsAllowedOrigins := os.Getenv("CORS_ALLOWED_ORIGINS")

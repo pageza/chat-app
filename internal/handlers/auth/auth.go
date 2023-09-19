@@ -8,8 +8,8 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/go-redis/redis/v8"
+	"github.com/pageza/chat-app/internal/common"
 	"github.com/pageza/chat-app/internal/helpers"
-	"github.com/pageza/chat-app/internal/middleware"
 	"github.com/pageza/chat-app/internal/models"
 	"github.com/pageza/chat-app/pkg/database"
 	"golang.org/x/crypto/bcrypt"
@@ -19,31 +19,31 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		helpers.HandleError(w, err.Error(), http.StatusBadRequest)
+		helpers.RespondWithError(w, helpers.NewAPIError(http.StatusBadRequest, "Invalid request payload"))
 		return
 	}
 	// Validate the user
 	if err := user.Validate(); err != nil {
-		helpers.HandleError(w, err.Error(), http.StatusBadRequest)
+		helpers.RespondWithError(w, helpers.NewAPIError(http.StatusBadRequest, "Invalid user data"))
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		helpers.HandleError(w, "Could not hash password", http.StatusInternalServerError)
+		helpers.RespondWithError(w, helpers.NewAPIError(http.StatusInternalServerError, "Internal server error"))
 		return
 	}
 	user.Password = string(hashedPassword)
 
 	result := database.DB.Create(&user)
 	if result.Error != nil {
-		helpers.HandleError(w, "Could not register user", http.StatusInternalServerError)
+		helpers.RespondWithError(w, helpers.NewAPIError(http.StatusInternalServerError, "Could not register user"))
 		return
 	}
 
-	tokenString, err := middleware.GenerateToken(user)
+	tokenString, err := common.GenerateToken(user)
 	if err != nil {
-		helpers.HandleError(w, "Could not log in", http.StatusInternalServerError)
+		helpers.RespondWithError(w, helpers.NewAPIError(http.StatusInternalServerError, "Could not log in"))
 		return
 	}
 
@@ -58,13 +58,13 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		helpers.HandleError(w, err.Error(), http.StatusBadRequest)
+		helpers.RespondWithError(w, helpers.NewAPIError(http.StatusBadRequest, "Invalid request payload"))
 		return
 	}
 
 	// Validate the user
 	if err := user.Validate(); err != nil {
-		helpers.HandleError(w, err.Error(), http.StatusBadRequest)
+		helpers.RespondWithError(w, helpers.NewAPIError(http.StatusBadRequest, "Invalid user data"))
 		return
 	}
 
@@ -73,13 +73,13 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = helpers.ValidateUser(&dbUser, user.Password)
 	if err != nil {
-		helpers.HandleError(w, "Invalid username or password", http.StatusUnauthorized)
+		helpers.RespondWithError(w, helpers.NewAPIError(http.StatusUnauthorized, "Invalid credentials"))
 		return
 	}
 
-	tokenString, err := middleware.GenerateToken(dbUser)
+	tokenString, err := common.GenerateToken(dbUser)
 	if err != nil {
-		helpers.HandleError(w, "Could not log in", http.StatusInternalServerError)
+		helpers.RespondWithError(w, helpers.NewAPIError(http.StatusInternalServerError, "Could not log in"))
 		return
 	}
 
@@ -95,12 +95,12 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 // LogoutHandler handles user logout
 func LogoutHandler(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 	if r == nil {
-		helpers.HandleError(w, "Request is nil", http.StatusInternalServerError)
+		helpers.RespondWithError(w, helpers.NewAPIError(http.StatusInternalServerError, "Internal server error"))
 		return
 	}
 
 	if rdb == nil {
-		helpers.HandleError(w, "Redis client is not initialized", http.StatusInternalServerError)
+		helpers.RespondWithError(w, helpers.NewAPIError(http.StatusInternalServerError, "Internal server error"))
 		return
 	}
 
@@ -108,26 +108,26 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 	actualToken := strings.TrimPrefix(tokenString, "Bearer ")
 
 	if actualToken == "" || actualToken == tokenString {
-		helpers.HandleError(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		helpers.RespondWithError(w, helpers.NewAPIError(http.StatusUnauthorized, "Invalid credentials"))
 		return
 	}
 
 	token, err := helpers.ParseToken(actualToken)
 	if err != nil {
-		helpers.HandleError(w, "Invalid token", http.StatusUnauthorized)
+		helpers.RespondWithError(w, helpers.NewAPIError(http.StatusUnauthorized, "Invalid credentials"))
 		return
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
-		helpers.HandleError(w, "Invalid token", http.StatusUnauthorized)
+		helpers.RespondWithError(w, helpers.NewAPIError(http.StatusUnauthorized, "Invalid credentials"))
 		return
 	}
 
 	expirationTime := int64(claims["exp"].(float64))
 	err = helpers.BlacklistToken(rdb, tokenString, expirationTime)
 	if err != nil {
-		helpers.HandleError(w, "Internal server error", http.StatusInternalServerError)
+		helpers.RespondWithError(w, helpers.NewAPIError(http.StatusInternalServerError, "Internal server error"))
 		return
 	}
 
