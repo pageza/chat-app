@@ -11,6 +11,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/go-redis/redis/v8"
 	"github.com/pageza/chat-app/internal/common"
+	"github.com/pageza/chat-app/internal/errors"
 )
 
 var rdb *redis.Client
@@ -110,6 +111,19 @@ func RateLimitMiddleware(next http.Handler) http.Handler {
 		}
 
 		limiter[ip] = time.Now()
+		next.ServeHTTP(w, r)
+	})
+}
+
+// RecoveryMiddleware recovers from panics and writes a 500 if anything goes wrong.
+func RecoveryMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Printf("Recovered from panic: %v", err)
+				errors.RespondWithError(w, errors.NewAPIError(http.StatusInternalServerError, "Internal Server Error"))
+			}
+		}()
 		next.ServeHTTP(w, r)
 	})
 }

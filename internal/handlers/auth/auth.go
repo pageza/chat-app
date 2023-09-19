@@ -84,10 +84,9 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var currentRetry = 0
 	var dbUser models.User
 
-	// Retry logic for querying the database
 	for currentRetry < maxRetries {
 		database.DB.Where("username = ?", user.Username).First(&dbUser)
-		if dbUser.ID != 0 { // Assuming ID is the primary key and it's non-zero when a user is found
+		if dbUser.ID != 0 {
 			break
 		}
 
@@ -100,21 +99,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Reset retry counter for the next operation
-	currentRetry = 0
-
-	// Retry logic for validating the user
-	for currentRetry < maxRetries {
-		err = helpers.ValidateUser(&dbUser, user.Password)
-		if err == nil {
-			break
-		}
-
-		currentRetry++
-		time.Sleep(2 * time.Second)
-	}
-
-	if currentRetry == maxRetries || err != nil {
+	err = helpers.ValidateUser(&dbUser, user.Password)
+	if err != nil {
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusUnauthorized, "Invalid credentials"))
 		return
 	}
