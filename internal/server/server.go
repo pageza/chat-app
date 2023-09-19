@@ -14,17 +14,22 @@ import (
 
 func StartServer() {
 	// Initialize CORS
-	c := config.InitializeCORS() // Use the InitializeCORS function from the config package
+	c := config.InitializeCORS()
 
 	// Initialize Redis
-	rdb := redis.GetRedisClient() // Initialize rdb here
+	rdb := redis.GetRedisClient()
 
 	// Initialize the router
 	r := mux.NewRouter()
+
+	// Middleware
 	r.Use(middleware.RecoveryMiddleware)
-	routes.InitializeRoutes(r, rdb) // Now rdb is defined
 	r.Use(middleware.RateLimitMiddleware)
 
+	// Initialize Routes
+	routes.InitializeRoutes(r, rdb)
+
+	// CORS Handler
 	handler := c.Handler(r)
 
 	// Start the HTTP server

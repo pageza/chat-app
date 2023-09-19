@@ -48,3 +48,29 @@ func BlacklistToken(rdb *redis.Client, tokenString string, expirationTime int64)
 
 	return nil // This line is technically unreachable but added for completeness
 }
+
+// CheckRateLimit checks the rate limit for a given IP in Redis
+func CheckRateLimit(ip string, rdb *redis.Client) (bool, error) {
+	ctx := context.TODO()
+	// Try to increment the count for this IP
+	newCount, err := rdb.Incr(ctx, ip).Result()
+	if err != nil {
+		logrus.Errorf("Redis error: %v", err)
+		return false, err
+	}
+
+	// If this is the first request from this IP, set the key to expire after 1 minute
+	if newCount == 1 {
+		if _, err := rdb.Expire(ctx, ip, 1*time.Minute).Result(); err != nil {
+			logrus.Errorf("Redis error: %v", err)
+			return false, err
+		}
+	}
+
+	// Check if the IP has exceeded the limit (e.g., 10 requests per minute)
+	if newCount > 10 {
+		return false, nil
+	}
+
+	return true, nil
+}
