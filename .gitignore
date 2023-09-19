@@ -58,3 +58,4 @@ vendor/
 # Executables
 main
 .env
+config.yaml

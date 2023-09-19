@@ -1,9 +1,8 @@
 package database
 
 import (
-	"os"
-
 	_ "github.com/lib/pq"
+	"github.com/pageza/chat-app/internal/config"
 	"github.com/pageza/chat-app/internal/models"
 	"github.com/sirupsen/logrus"
 	"gorm.io/driver/postgres"
@@ -14,7 +13,7 @@ var DB *gorm.DB
 
 // InitializeDB sets up and returns a database instance
 func InitializeDB() (*gorm.DB, error) {
-	dsn := os.Getenv("POSTGRE_DSN")
+	dsn := config.PostgreDSN // Get DSN from config package
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return nil, err

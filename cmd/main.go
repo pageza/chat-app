@@ -4,6 +4,7 @@ import (
 	"github.com/pageza/chat-app/internal/config"
 	"github.com/pageza/chat-app/internal/logging"
 	"github.com/pageza/chat-app/internal/server"
+	"github.com/pageza/chat-app/pkg/database"
 	"github.com/sirupsen/logrus"
 )
 
@@ -14,6 +15,9 @@ func main() {
 
 	// Initialize configuration
 	config.Initialize()
+
+	// Initialize the database
+	database.GetDB()
 
 	// Start the server
 	server.StartServer()
