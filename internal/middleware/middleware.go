@@ -3,7 +3,6 @@ package middleware
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/pageza/chat-app/internal/common"
 	"github.com/pageza/chat-app/internal/errors"
+	"github.com/sirupsen/logrus"
 )
 
 var rdb *redis.Client
@@ -23,7 +23,7 @@ func InitializeRedis() {
 
 	_, err := rdb.Ping(context.TODO()).Result()
 	if err != nil {
-		log.Fatalf("Could not connect to Redis: %v", err)
+		logrus.Fatalf("Could not connect to Redis: %v", err)
 	}
 }
 
@@ -120,7 +120,7 @@ func RecoveryMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				log.Printf("Recovered from panic: %v", err)
+				logrus.Printf("Recovered from panic: %v", err)
 				errors.RespondWithError(w, errors.NewAPIError(http.StatusInternalServerError, "Internal Server Error"))
 			}
 		}()

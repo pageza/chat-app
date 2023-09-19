@@ -2,13 +2,13 @@ package common
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/pageza/chat-app/internal/models"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -25,19 +25,19 @@ func Initialize() {
 	TokenExpiration = os.Getenv("TOKEN_EXPIRATION")
 
 	if JwtSecret == "" || JwtIssuer == "" || RedisAddr == "" || TokenExpiration == "" {
-		log.Fatal("Environment variables are not set")
+		logrus.Fatal("Environment variables are not set")
 	}
 
 	_, err := time.ParseDuration(TokenExpiration)
 	if err != nil {
-		log.Fatalf("Invalid token expiration duration: %v", err)
+		logrus.Fatalf("Invalid token expiration duration: %v", err)
 	}
 }
 
 func GenerateToken(user models.User) (string, error) {
 	expirationDuration, err := time.ParseDuration(TokenExpiration)
 	if err != nil {
-		log.Fatalf("Invalid token expiration duration: %v", err)
+		logrus.Fatalf("Invalid token expiration duration: %v", err)
 	}
 
 	expirationTime := time.Now().Add(expirationDuration).Unix()

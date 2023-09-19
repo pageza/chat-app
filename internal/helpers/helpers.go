@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/pageza/chat-app/internal/common"
 	"github.com/pageza/chat-app/internal/errors" // <-- Updated import
 	"github.com/pageza/chat-app/internal/models"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -53,7 +53,7 @@ func BlacklistToken(rdb *redis.Client, tokenString string, expirationTime int64)
 	}
 
 	if currentRetry == maxRetries {
-		log.Printf("Max retries reached, could not blacklist the token")
+		logrus.Printf("Max retries reached, could not blacklist the token")
 		return fmt.Errorf("max retries reached, could not blacklist the token")
 	}
 

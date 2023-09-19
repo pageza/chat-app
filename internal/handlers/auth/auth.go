@@ -3,7 +3,6 @@ package auth
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -15,6 +14,7 @@ import (
 	"github.com/pageza/chat-app/internal/helpers"
 	"github.com/pageza/chat-app/internal/models"
 	"github.com/pageza/chat-app/pkg/database"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -168,7 +168,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 	}
 
 	if currentRetry == maxRetries {
-		log.Printf("Failed to blacklist token after %d retries", maxRetries)
+		logrus.Printf("Failed to blacklist token after %d retries", maxRetries)
 	}
 
 	helpers.ClearTokenCookie(w)
