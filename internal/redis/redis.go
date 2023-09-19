@@ -55,20 +55,27 @@ func CheckRateLimit(ip string, rdb *redis.Client) (bool, error) {
 	// Try to increment the count for this IP
 	newCount, err := rdb.Incr(ctx, ip).Result()
 	if err != nil {
-		logrus.Errorf("Redis error: %v", err)
+		logrus.WithFields(logrus.Fields{
+			"ip": ip,
+		}).Errorf("Redis error: %v", err)
 		return false, err
 	}
 
 	// If this is the first request from this IP, set the key to expire after 1 minute
 	if newCount == 1 {
 		if _, err := rdb.Expire(ctx, ip, 1*time.Minute).Result(); err != nil {
-			logrus.Errorf("Redis error: %v", err)
+			logrus.WithFields(logrus.Fields{
+				"ip": ip,
+			}).Errorf("Redis error: %v", err)
 			return false, err
 		}
 	}
 
 	// Check if the IP has exceeded the limit (e.g., 10 requests per minute)
 	if newCount > 10 {
+		logrus.WithFields(logrus.Fields{
+			"ip": ip,
+		}).Warn("Rate limit exceeded")
 		return false, nil
 	}
 

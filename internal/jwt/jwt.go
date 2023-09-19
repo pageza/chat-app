@@ -15,7 +15,9 @@ import (
 func GenerateToken(user models.User) (string, error) {
 	expirationDuration, err := time.ParseDuration(config.TokenExpiration)
 	if err != nil {
-		logrus.Fatalf("Invalid token expiration duration: %v", err)
+		logrus.WithFields(logrus.Fields{
+			"duration": config.TokenExpiration,
+		}).Fatalf("Invalid token expiration duration: %v", err)
 	}
 
 	expirationTime := time.Now().Add(expirationDuration).Unix()
@@ -29,6 +31,7 @@ func GenerateToken(user models.User) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(config.JwtSecret))
 }
+
 func SetTokenCookie(w http.ResponseWriter, token string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
@@ -40,16 +43,23 @@ func SetTokenCookie(w http.ResponseWriter, token string) {
 func ParseToken(tokenString string) (*jwt.Token, error) {
 	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			logrus.WithFields(logrus.Fields{
+				"alg": token.Header["alg"],
+			}).Error("Unexpected signing method")
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return []byte(config.JwtSecret), nil
 	})
 }
+
 func GenerateTokenAndSetCookie(w http.ResponseWriter, user models.User) {
 	tokenString, err := GenerateToken(user)
 	if err != nil {
-		apiErr := errors.NewAPIError(http.StatusInternalServerError, "Could not log in") // <-- Updated line
-		errors.RespondWithError(w, apiErr)                                               // <-- Updated line
+		logrus.WithFields(logrus.Fields{
+			"user": user.Username,
+		}).Error("Could not generate token")
+		apiErr := errors.NewAPIError(http.StatusInternalServerError, "Could not log in")
+		errors.RespondWithError(w, apiErr)
 		return
 	}
 	SetTokenCookie(w, tokenString)

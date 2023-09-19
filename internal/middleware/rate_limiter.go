@@ -11,16 +11,24 @@ import (
 func RateLimitMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip := r.RemoteAddr
-		rdb := redis.GetRedisClient() // Assuming you have a GetRedisClient function in your redis package
+		userAgent := r.UserAgent()
+		rdb := redis.GetRedisClient()
 
 		allowed, err := redis.CheckRateLimit(ip, rdb)
 		if err != nil {
-			logrus.Errorf("Rate limit check failed: %v", err)
+			logrus.WithFields(logrus.Fields{
+				"ip":        ip,
+				"userAgent": userAgent,
+			}).Errorf("Rate limit check failed: %v", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 
 		if !allowed {
+			logrus.WithFields(logrus.Fields{
+				"ip":        ip,
+				"userAgent": userAgent,
+			}).Warn("Rate limit exceeded")
 			http.Error(w, "Too Many Requests", http.StatusTooManyRequests)
 			return
 		}

@@ -11,13 +11,18 @@ import (
 	"github.com/pageza/chat-app/internal/common"
 	"github.com/pageza/chat-app/internal/config"
 	"github.com/pageza/chat-app/internal/redis"
+	"github.com/sirupsen/logrus"
 )
 
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("token")
 		if err != nil {
-			// common.RespondWithError(w, "Unauthorized", http.StatusUnauthorized)
+			logrus.WithFields(logrus.Fields{
+				"method": r.Method,
+				"url":    r.URL.String(),
+				"ip":     r.RemoteAddr,
+			}).Warn("Unauthorized access attempt")
 			common.RespondWithError(w, common.NewAPIError(http.StatusUnauthorized, "Unauthorized"))
 			return
 		}

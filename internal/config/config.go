@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -27,7 +26,9 @@ func Initialize() {
 	// Load the .env file for sensitive variables
 	err := godotenv.Load("/home/zach/projects/chat-app/.env")
 	if err != nil {
-		logrus.Fatal("Error loading .env file:", err)
+		logrus.WithFields(logrus.Fields{
+			"file": ".env",
+		}).Fatal("Error loading .env file:", err)
 	}
 
 	JwtSecret = os.Getenv("JWT_SECRET")
@@ -35,8 +36,11 @@ func Initialize() {
 	PostgreDSN = os.Getenv("POSTGRE_DSN")
 
 	if JwtSecret == "" || JwtIssuer == "" || PostgreDSN == "" {
-		logrus.Fatal("Sensitive environment variables are not set")
+		logrus.WithFields(logrus.Fields{
+			"missing_vars": strings.Join([]string{"JWT_SECRET", "JWT_ISSUER", "POSTGRE_DSN"}, ", "),
+		}).Fatal("Sensitive environment variables are not set")
 	}
+
 	// Determine the environment
 	env := os.Getenv("ENV") // ENV should be either 'development' or 'production'
 	if env == "" {
@@ -44,23 +48,13 @@ func Initialize() {
 	}
 
 	// Read environment-specific configurations
-	dbHost := viper.GetString(fmt.Sprintf("%s.database.host", env))
-	dbPort := viper.GetString(fmt.Sprintf("%s.database.port", env))
-	dbUsername := viper.GetString(fmt.Sprintf("%s.database.username", env))
-	dbPassword := viper.GetString(fmt.Sprintf("%s.database.password", env))
-	dbName := viper.GetString(fmt.Sprintf("%s.database.dbname", env))
-	dbSSLMode := viper.GetString(fmt.Sprintf("%s.database.sslmode", env))
-
-	// Construct the DSN
-	PostgreDSN = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		dbHost, dbPort, dbUsername, dbPassword, dbName, dbSSLMode)
-
-	// Initialize Viper for non-sensitive, environment-specific variables
 	viper.SetConfigName("config")
 	viper.AddConfigPath("./config/")
 	err = viper.ReadInConfig()
 	if err != nil {
-		logrus.Fatalf("Fatal error config file: %s \n", err)
+		logrus.WithFields(logrus.Fields{
+			"file": "config",
+		}).Fatalf("Fatal error config file: %s \n", err)
 	}
 
 	RedisAddr = viper.GetString("REDIS_ADDR")
@@ -72,6 +66,8 @@ func Initialize() {
 
 	_, err = time.ParseDuration(TokenExpiration)
 	if err != nil {
-		logrus.Fatalf("Invalid token expiration duration: %v", err)
+		logrus.WithFields(logrus.Fields{
+			"duration": TokenExpiration,
+		}).Fatalf("Invalid token expiration duration: %v", err)
 	}
 }

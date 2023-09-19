@@ -16,7 +16,6 @@ import (
 	"github.com/pageza/chat-app/internal/utils"
 	"github.com/pageza/chat-app/pkg/database"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -24,26 +23,21 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"method": r.Method,
+			"url":    r.URL.String(),
+			"ip":     r.RemoteAddr,
+		}).Warn("Invalid request payload")
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusBadRequest, "Invalid request payload"))
 		return
 	}
-	if err := user.Validate(); err != nil {
-		errors.RespondWithError(w, errors.NewAPIError(http.StatusBadRequest, "Invalid user data"))
-		return
-	}
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		errors.RespondWithError(w, errors.NewAPIError(http.StatusInternalServerError, "Internal server error"))
-		return
-	}
-	user.Password = string(hashedPassword)
 
 	const maxRetries = 3
 	var currentRetry = 0
-	var result *gorm.DB // Declare result here
+	var result *gorm.DB
 
 	for currentRetry < maxRetries {
-		result = database.DB.Create(&user) // Assign to result
+		result = database.DB.Create(&user)
 		if result.Error == nil {
 			break
 		}
@@ -53,6 +47,11 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if currentRetry == maxRetries || result.Error != nil {
+		logrus.WithFields(logrus.Fields{
+			"method": r.Method,
+			"url":    r.URL.String(),
+			"ip":     r.RemoteAddr,
+		}).Warn("Could not register user after max retries")
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusInternalServerError, "Could not register user"))
 		return
 	}
@@ -62,6 +61,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusInternalServerError, "Could not log in"))
 		return
 	}
+
 	jwtI.SetTokenCookie(w, tokenString)
 	w.WriteHeader(http.StatusCreated)
 	fmt.Fprintf(w, "User successfully registered and logged in")
@@ -71,13 +71,12 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"method": r.Method,
+			"url":    r.URL.String(),
+			"ip":     r.RemoteAddr,
+		}).Warn("Invalid request payload")
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusBadRequest, "Invalid request payload"))
-		return
-	}
-
-	// Validate the user
-	if err := user.Validate(); err != nil {
-		errors.RespondWithError(w, errors.NewAPIError(http.StatusBadRequest, "Invalid user data"))
 		return
 	}
 
@@ -96,6 +95,11 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if currentRetry == maxRetries || dbUser.ID == 0 {
+		logrus.WithFields(logrus.Fields{
+			"method": r.Method,
+			"url":    r.URL.String(),
+			"ip":     r.RemoteAddr,
+		}).Warn("Invalid credentials after max retries")
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusUnauthorized, "Invalid credentials"))
 		return
 	}
@@ -114,10 +118,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	jwtI.SetTokenCookie(w, tokenString)
 
-	// Creating the JSON response
 	jsonResponse := map[string]string{"token": tokenString}
-
-	// Serializing and sending the JSON response using helper function
 	utils.SendJSONResponse(w, http.StatusOK, jsonResponse)
 }
 
@@ -169,7 +170,11 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 	}
 
 	if currentRetry == maxRetries {
-		logrus.Printf("Failed to blacklist token after %d retries", maxRetries)
+		logrus.WithFields(logrus.Fields{
+			"method": r.Method,
+			"url":    r.URL.String(),
+			"ip":     r.RemoteAddr,
+		}).Warnf("Failed to blacklist token after %d retries", maxRetries)
 	}
 
 	jwtI.ClearTokenCookie(w)

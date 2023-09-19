@@ -12,7 +12,11 @@ func RecoveryMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				logrus.Printf("Recovered from panic: %v", err)
+				logrus.WithFields(logrus.Fields{
+					"method": r.Method,
+					"url":    r.URL.String(),
+					"ip":     r.RemoteAddr,
+				}).Errorf("Recovered from panic: %v", err)
 				errors.RespondWithError(w, errors.NewAPIError(http.StatusInternalServerError, "Internal Server Error"))
 			}
 		}()
