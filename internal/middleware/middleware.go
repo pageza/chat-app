@@ -49,7 +49,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		tokenStr := cookie.Value
 		claims := &jwt.StandardClaims{}
 		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-			return []byte(common.JWT_SECRET), nil
+			return []byte(common.JwtSecret), nil
 		})
 
 		if err != nil || !token.Valid {
@@ -78,7 +78,7 @@ func CheckAuth(w http.ResponseWriter, r *http.Request) {
 	tokenStr := cookie.Value
 	claims := &jwt.StandardClaims{}
 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(common.JWT_SECRET), nil
+		return []byte(common.JwtSecret), nil
 	})
 
 	if err != nil || !token.Valid {

@@ -12,19 +12,19 @@ import (
 )
 
 var (
-	JWT_SECRET      string
-	JWT_ISSUER      string
+	JwtSecret       string
+	JwtIssuer       string
 	RedisAddr       string
 	TokenExpiration string
 )
 
 func Initialize() {
-	JWT_SECRET = os.Getenv("JWT_SECRET")
-	JWT_ISSUER = os.Getenv("JWT_ISSUER")
+	JwtSecret = os.Getenv("JWT_SECRET")
+	JwtIssuer = os.Getenv("JWT_ISSUER")
 	RedisAddr = os.Getenv("REDIS_ADDR")
 	TokenExpiration = os.Getenv("TOKEN_EXPIRATION")
 
-	if JWT_SECRET == "" || JWT_ISSUER == "" || RedisAddr == "" || TokenExpiration == "" {
+	if JwtSecret == "" || JwtIssuer == "" || RedisAddr == "" || TokenExpiration == "" {
 		log.Fatal("Environment variables are not set")
 	}
 
@@ -44,12 +44,12 @@ func GenerateToken(user models.User) (string, error) {
 
 	claims := &jwt.StandardClaims{
 		ExpiresAt: expirationTime,
-		Issuer:    JWT_ISSUER,
+		Issuer:    JwtIssuer,
 		Subject:   user.Username,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(JWT_SECRET))
+	return token.SignedString([]byte(JwtSecret))
 }
 
 // APIError represents an error that can be sent in an API response
