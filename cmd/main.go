@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -17,17 +18,31 @@ import (
 
 func main() {
 	// Initialize Logrus and set log file
-	logFile, err := os.OpenFile("application.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	logFile, err := os.OpenFile("../logs/application.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		logrus.Fatalf("Failed to open log file: %s", err)
 	}
 	defer logFile.Close()
+	logrus.SetLevel(logrus.DebugLevel)
 	logrus.SetOutput(logFile)
+	// Log to both file and console
+	logrus.SetOutput(io.MultiWriter(os.Stdout, logFile))
 
-	err = godotenv.Load()
+	// Read the .env file
+	envContent, err := os.ReadFile("../.env")
+	if err != nil {
+		logrus.Fatal("Error reading .env file: ", err)
+	} else {
+		logrus.Info("Contents of .env: ", string(envContent))
+	}
+
+	err = godotenv.Load("/home/zach/projects/chat-app")
 	if err != nil {
 		logrus.Fatal("Error loading .env file")
 	}
+	logrus.Info("TEST_VAR:", os.Getenv("TEST_VAR"))
+	logrus.Info("CORS_ALLOWED_ORIGINS:", os.Getenv("CORS_ALLOWED_ORIGINS"))
+
 	common.Initialize()
 
 	// Read environment variables
