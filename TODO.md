@@ -15,7 +15,7 @@
 - [ ] **Testing**: Add unit tests and integration tests to ensure that your code is working as expected. This will also make it easier to add new features in the future.
 - [ ] **Documentation**: You might want to add more comments and documentation to explain the purpose and functionality of different parts of your code. This will make it easier for other developers (or future you) to understand the code.
 - [ ] **API Versioning**: If your application exposes an API, consider adding versioning to the API routes.
-- [ ] **Rate Limiting and Security**: You already have some middleware for rate limiting, which is great. Consider also adding other security features like input validation, JWT token validation, etc.
+- [x] **Rate Limiting and Security**: You already have some middleware for rate limiting, which is great. Consider also adding other security features like input validation, JWT token validation, etc.
 - [ ] **Front-end**: Since you're open-minded about front-end frameworks, you might want to start thinking about how you'll build the front-end and how it will interact with your Go backend.
 - [ ] **Continuous Integration**: Consider setting up a CI/CD pipeline for automated testing and deployment.
 - [ ] **Performance Optimization**: Profile your application to find bottlenecks and optimize them.
