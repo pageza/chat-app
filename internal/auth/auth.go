@@ -9,10 +9,11 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/go-redis/redis/v8"
-	"github.com/pageza/chat-app/internal/common"
 	"github.com/pageza/chat-app/internal/errors" // <-- Updated import
-	"github.com/pageza/chat-app/internal/helpers"
+	jwtI "github.com/pageza/chat-app/internal/jwt"
 	"github.com/pageza/chat-app/internal/models"
+	redisI "github.com/pageza/chat-app/internal/redis"
+	"github.com/pageza/chat-app/internal/utils"
 	"github.com/pageza/chat-app/pkg/database"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
@@ -56,12 +57,12 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenString, err := common.GenerateToken(user)
+	tokenString, err := jwtI.GenerateToken(user)
 	if err != nil {
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusInternalServerError, "Could not log in"))
 		return
 	}
-	helpers.SetTokenCookie(w, tokenString)
+	jwtI.SetTokenCookie(w, tokenString)
 	w.WriteHeader(http.StatusCreated)
 	fmt.Fprintf(w, "User successfully registered and logged in")
 }
@@ -99,25 +100,25 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = helpers.ValidateUser(&dbUser, user.Password)
+	err = utils.ValidateUser(&dbUser, user.Password)
 	if err != nil {
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusUnauthorized, "Invalid credentials"))
 		return
 	}
 
-	tokenString, err := common.GenerateToken(dbUser)
+	tokenString, err := jwtI.GenerateToken(dbUser)
 	if err != nil {
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusInternalServerError, "Could not log in"))
 		return
 	}
 
-	helpers.SetTokenCookie(w, tokenString)
+	jwtI.SetTokenCookie(w, tokenString)
 
 	// Creating the JSON response
 	jsonResponse := map[string]string{"token": tokenString}
 
 	// Serializing and sending the JSON response using helper function
-	helpers.SendJSONResponse(w, http.StatusOK, jsonResponse)
+	utils.SendJSONResponse(w, http.StatusOK, jsonResponse)
 }
 
 // LogoutHandler handles user logout
@@ -140,7 +141,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 		return
 	}
 
-	token, err := helpers.ParseToken(actualToken)
+	token, err := jwtI.ParseToken(actualToken)
 	if err != nil {
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusUnauthorized, "Invalid credentials"))
 		return
@@ -158,7 +159,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 	var currentRetry = 0
 
 	for currentRetry < maxRetries {
-		err = helpers.BlacklistToken(rdb, tokenString, expirationTime)
+		err = redisI.BlacklistToken(rdb, tokenString, expirationTime)
 		if err == nil {
 			break
 		}
@@ -171,7 +172,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 		logrus.Printf("Failed to blacklist token after %d retries", maxRetries)
 	}
 
-	helpers.ClearTokenCookie(w)
+	jwtI.ClearTokenCookie(w)
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "Logged out successfully")
 }

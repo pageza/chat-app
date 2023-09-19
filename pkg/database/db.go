@@ -12,15 +12,34 @@ import (
 
 var DB *gorm.DB
 
-// TODO: You might want to add logging for successful database connection.
-
-func init() {
-	var err error
+// InitializeDB sets up and returns a database instance
+func InitializeDB() (*gorm.DB, error) {
 	dsn := os.Getenv("POSTGRE_DSN")
-	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		logrus.Fatal(err)
+		return nil, err
 	}
-	DB.AutoMigrate(&models.User{})
+	return db, nil
+}
 
+// AutoMigrateDB performs auto-migration for the given database instance
+func AutoMigrateDB(db *gorm.DB) error {
+	return db.AutoMigrate(&models.User{})
+}
+
+// GetDB initializes the database and performs auto-migration
+func GetDB() {
+	var err error
+	DB, err = InitializeDB()
+	if err != nil {
+		logrus.Fatalf("Failed to initialize database, got error: %v", err)
+		return
+	}
+
+	if err := AutoMigrateDB(DB); err != nil {
+		logrus.Fatalf("Failed to auto-migrate User model, got error: %v", err)
+		return
+	}
+
+	logrus.Info("Successfully connected to the database and auto-migrated the User model.")
 }

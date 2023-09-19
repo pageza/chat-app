@@ -5,11 +5,11 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
-	"github.com/pageza/chat-app/internal/handlers/auth"
-	"github.com/pageza/chat-app/internal/handlers/chat"
-	"github.com/pageza/chat-app/internal/handlers/user"
-	"github.com/pageza/chat-app/internal/handlers/utils"
+	"github.com/pageza/chat-app/internal/auth"
+	"github.com/pageza/chat-app/internal/chat"
 	"github.com/pageza/chat-app/internal/middleware"
+	"github.com/pageza/chat-app/internal/user"
+	"github.com/pageza/chat-app/internal/utils"
 )
 
 func InitializeRoutes(r *mux.Router, rdb *redis.Client) {
