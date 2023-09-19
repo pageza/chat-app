@@ -8,10 +8,10 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/go-redis/redis/v8"
-	"github.com/pageza/chat-app/database"
-	"github.com/pageza/chat-app/helpers"
-	"github.com/pageza/chat-app/middleware"
-	"github.com/pageza/chat-app/models"
+	"github.com/pageza/chat-app/internal/helpers"
+	"github.com/pageza/chat-app/internal/middleware"
+	"github.com/pageza/chat-app/internal/models"
+	"github.com/pageza/chat-app/pkg/database"
 	"golang.org/x/crypto/bcrypt"
 )
 

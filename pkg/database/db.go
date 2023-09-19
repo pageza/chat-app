@@ -5,12 +5,14 @@ import (
 	"os"
 
 	_ "github.com/lib/pq"
-	"github.com/pageza/chat-app/models"
+	"github.com/pageza/chat-app/internal/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 var DB *gorm.DB
+
+// TODO: You might want to add logging for successful database connection.
 
 func init() {
 	var err error

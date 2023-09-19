@@ -16,6 +16,7 @@ type User struct {
 }
 
 // Validate checks if the User fields are valid.
+// TODO: Consider adding more validations like email format, password complexity, etc
 func (u *User) Validate() error {
 	if u.Username == "" {
 		return errors.New("username is required")

@@ -11,7 +11,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/go-redis/redis/v8"
-	"github.com/pageza/chat-app/models"
+	"github.com/pageza/chat-app/internal/models"
 )
 
 var (
@@ -20,6 +20,8 @@ var (
 	redisAddr       string
 	tokenExpiration string
 )
+
+// TODO: Consider adding middleware for logging and metrics.
 
 // In middleware package
 func Initialize() {

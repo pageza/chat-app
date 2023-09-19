@@ -5,6 +5,8 @@ import (
 	"net/http"
 )
 
+// TODO: Consider adding more user-related functionalities like updating profiles, password change, etc.
+
 func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve username and email from request headers, which were set by ValidateMiddleware
 	username := r.Header.Get("username")

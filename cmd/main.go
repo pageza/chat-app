@@ -9,8 +9,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
-	"github.com/pageza/chat-app/middleware"
-	"github.com/pageza/chat-app/routes"
+	"github.com/pageza/chat-app/internal/middleware"
+	"github.com/pageza/chat-app/internal/routes"
 
 	"github.com/rs/cors"
 )
@@ -37,6 +37,7 @@ func main() {
 		AllowedHeaders:   corsAllowedHeaders,
 	})
 
+	// TODO: Consider moving the Redis initialization to a separate function for better readability
 	// Get Redis client
 	middleware.InitializeRedis()
 	rdb := middleware.GetRedisClient()

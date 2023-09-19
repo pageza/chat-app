@@ -9,10 +9,12 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/go-redis/redis/v8"
-	"github.com/pageza/chat-app/middleware"
-	"github.com/pageza/chat-app/models"
+	"github.com/pageza/chat-app/internal/middleware"
+	"github.com/pageza/chat-app/internal/models"
 	"golang.org/x/crypto/bcrypt"
 )
+
+// TODO: Consider adding more comments for clarity.
 
 func ValidateUser(user *models.User, password string) error {
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
