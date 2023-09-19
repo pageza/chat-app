@@ -45,6 +45,7 @@ func main() {
 
 	// Initialize the router
 	r := mux.NewRouter()
+	r.Use(middleware.RecoveryMiddleware)
 	routes.InitializeRoutes(r, rdb)
 	r.Use(middleware.RateLimitMiddleware)
 
