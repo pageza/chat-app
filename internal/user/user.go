@@ -17,6 +17,7 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If either username or email is empty, it means the JWT was not validated
 	if username == "" || email == "" {
+		// TODO: Consider logging the error for debugging
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -30,6 +31,7 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	// Convert the map to JSON
 	jsonResponse, err := json.Marshal(userInfo)
 	if err != nil {
+		// TODO: Consider logging the error for debugging
 		http.Error(w, "Could not create user info response", http.StatusInternalServerError)
 		return
 	}
