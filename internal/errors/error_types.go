@@ -1,51 +1,54 @@
-// error_types.go
+// Package errors defines custom error types that are used throughout the chat application.
+// These error types are designed to provide detailed information about different kinds of errors
+// that can occur, such as authentication errors, rate limit errors, and database errors.
 
 package errors
 
-// AuthenticationError for errors related to user authentication, such as invalid credentials or expired tokens.
+// AuthenticationError represents errors related to user authentication.
+// This could be due to invalid credentials, expired tokens, etc.
 type AuthenticationError struct {
-	Status  int    `json:"status"`
-	Message string `json:"message"`
-	Reason  string `json:"reason,omitempty"`
+	Status  int    `json:"status"`           // HTTP status code
+	Message string `json:"message"`          // Error message
+	Reason  string `json:"reason,omitempty"` // Optional additional information about the error
 }
 
-// RateLimitError for errors related to exceeding rate limits.
+// RateLimitError represents errors related to exceeding API rate limits.
 type RateLimitError struct {
-	Status     int    `json:"status"`
-	Message    string `json:"message"`
-	RetryAfter int    `json:"retry_after"`
+	Status     int    `json:"status"`      // HTTP status code
+	Message    string `json:"message"`     // Error message
+	RetryAfter int    `json:"retry_after"` // Time in seconds after which the client may retry
 }
 
-// DatabaseError for errors related to database operations, such as failed queries or connection issues.
+// DatabaseError represents errors related to database operations.
 type DatabaseError struct {
-	Status  int    `json:"status"`
-	Message string `json:"message"`
-	Query   string `json:"query,omitempty"`
+	Status  int    `json:"status"`          // HTTP status code
+	Message string `json:"message"`         // Error message
+	Query   string `json:"query,omitempty"` // Optional SQL query that caused the error
 }
 
-// ValidationError for errors related to invalid input or failed validation.
+// ValidationError represents errors related to invalid input or validation failure.
 type ValidationError struct {
-	Status  int      `json:"status"`
-	Message string   `json:"message"`
-	Fields  []string `json:"fields,omitempty"`
+	Status  int      `json:"status"`           // HTTP status code
+	Message string   `json:"message"`          // Error message
+	Fields  []string `json:"fields,omitempty"` // Fields that failed validation
 }
 
-// InternalServerError for errors that are unexpected and likely indicate a bug or system issue.
+// InternalServerError represents errors that are unexpected and likely indicate a system issue.
 type InternalServerError struct {
-	Status  int    `json:"status"`
-	Message string `json:"message"`
-	Stack   string `json:"stack,omitempty"`
+	Status  int    `json:"status"`          // HTTP status code
+	Message string `json:"message"`         // Error message
+	Stack   string `json:"stack,omitempty"` // Optional stack trace
 }
 
-// NotFoundError for errors where a resource could not be found.
+// NotFoundError represents errors where a requested resource could not be found.
 type NotFoundError struct {
-	Status   int    `json:"status"`
-	Message  string `json:"message"`
-	Resource string `json:"resource"`
+	Status   int    `json:"status"`   // HTTP status code
+	Message  string `json:"message"`  // Error message
+	Resource string `json:"resource"` // The resource that could not be found
 }
 
-// APIError represents an error that can be sent in an API response
+// APIError is a general-purpose error type for API responses.
 type APIError struct {
-	Status  int    `json:"status"`
-	Message string `json:"message"`
+	Status  int    `json:"status"`  // HTTP status code
+	Message string `json:"message"` // Error message
 }

@@ -1,3 +1,6 @@
+// Package user contains functionalities related to user operations.
+// TODO: Consider adding more user-related functionalities like updating profiles, password change, etc.
+
 package user
 
 import (
@@ -5,8 +8,8 @@ import (
 	"net/http"
 )
 
-// TODO: Consider adding more user-related functionalities like updating profiles, password change, etc.
-
+// UserInfoHandler handles the request to get user information.
+// It expects the request to have valid JWT tokens in the header, which are validated by middleware.
 func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve username and email from request headers, which were set by ValidateMiddleware
 	username := r.Header.Get("username")
