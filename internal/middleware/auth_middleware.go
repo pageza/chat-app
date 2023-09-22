@@ -19,44 +19,48 @@ import (
 
 // AuthMiddleware is a middleware function for handling authentication.
 // It checks for a valid JWT token in the request cookie and proceeds to the next handler if valid.
+// AuthMiddleware is a middleware function for handling authentication.
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Retrieve the token from the cookie
-		cookie, err := r.Cookie("token")
-		if err != nil {
-			// Log unauthorized access attempt
-			logrus.WithFields(logrus.Fields{
-				"method": r.Method,
-				"url":    r.URL.String(),
-				"ip":     r.RemoteAddr,
-			}).Warn("Unauthorized access attempt")
-			common.RespondWithError(w, common.NewAPIError(http.StatusUnauthorized, "Unauthorized"))
+		if !validateToken(r) {
+			unauthorizedAccess(w, r)
 			return
 		}
-
-		// Check if the token is blacklisted
-		rdb := redis.GetRedisClient()
-		isBlacklisted, err := rdb.Get(context.TODO(), cookie.Value).Result()
-		if err == nil && isBlacklisted == "blacklisted" {
-			common.RespondWithError(w, common.NewAPIError(http.StatusUnauthorized, "Unauthorized"))
-			return
-		}
-
-		// Validate the token
-		tokenStr := cookie.Value
-		claims := &jwt.StandardClaims{}
-		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-			return []byte(config.JwtSecret), nil
-		})
-
-		if err != nil || !token.Valid {
-			common.RespondWithError(w, common.NewAPIError(http.StatusUnauthorized, "Unauthorized"))
-			return
-		}
-
-		// Proceed to the next middleware or handler
 		next(w, r)
 	})
+}
+
+// validateToken validates the JWT token from the request.
+func validateToken(r *http.Request) bool {
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		return false
+	}
+
+	// Check if the token is blacklisted
+	rdb := redis.GetRedisClient()
+	isBlacklisted, err := rdb.Get(context.TODO(), cookie.Value).Result()
+	if err == nil && isBlacklisted == "blacklisted" {
+		return false
+	}
+
+	tokenStr := cookie.Value
+	claims := &jwt.StandardClaims{}
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(config.JwtSecret), nil
+	})
+
+	return err == nil && token.Valid
+}
+
+// unauthorizedAccess logs and responds to unauthorized access attempts.
+func unauthorizedAccess(w http.ResponseWriter, r *http.Request) {
+	logrus.WithFields(logrus.Fields{
+		"method": r.Method,
+		"url":    r.URL.String(),
+		"ip":     r.RemoteAddr,
+	}).Warn("Unauthorized access attempt")
+	common.RespondWithError(w, common.NewAPIError(http.StatusUnauthorized, "Unauthorized"))
 }
 
 // CheckAuth is a utility function to check if the request is authenticated.

@@ -1,47 +1,68 @@
-// Package server initializes and starts the HTTP server.
-// It sets up CORS, middleware, and routes.
-
 package server
 
 import (
+	"context"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/pageza/chat-app/internal/config" // Import the config package
+	"github.com/pageza/chat-app/internal/config"
 	"github.com/pageza/chat-app/internal/middleware"
 	"github.com/pageza/chat-app/internal/redis"
 	"github.com/pageza/chat-app/internal/routes"
 	"github.com/sirupsen/logrus"
 )
 
-// StartServer initializes and starts the HTTP server.
+// StartServer initializes the HTTP server and listens for incoming requests.
 func StartServer() {
-	// Initialize CORS settings from the config package
-	c := config.InitializeCORS()
-
-	// Get the Redis client instance
+	// Initialize Redis client
 	rdb := redis.GetRedisClient()
 
-	// Initialize the Gorilla Mux router
+	// Create a new router
 	r := mux.NewRouter()
-
-	// Add middleware for recovery and rate-limiting
-	r.Use(middleware.RecoveryMiddleware)
 	r.Use(middleware.RateLimitMiddleware)
 
-	// Initialize all routes for the application
+	// Add your routes here
 	routes.InitializeRoutes(r, rdb)
 
-	// Apply CORS settings to the router
-	handler := c.Handler(r)
+	// Create a new HTTP server
+	srv := &http.Server{
+		Addr:    ":" + config.ServerPort,
+		Handler: r,
+	}
 
-	// Get the server port from environment variables
-	serverPort := os.Getenv("SERVER_PORT")
+	// Create a context for graceful shutdown
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	ctx, cancel := context.WithCancel(context.Background())
 
-	// Log the server start event
-	logrus.Info("Server is running on port:", serverPort)
+	// Goroutine to listen for the interrupt signal
+	go func() {
+		<-stop // Wait for a signal to stop
+		logrus.Info("Received signal, shutting down server.")
 
-	// Start the HTTP server
-	http.ListenAndServe(":"+serverPort, handler)
+		// Create a context with a 5-second timeout for the server to close
+		ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second) // <-- Changed here
+		defer cancel()                                                         // This is important
+
+		// Attempt to gracefully shutdown the server
+		if err := srv.Shutdown(ctx); err != nil {
+			logrus.Fatalf("Server Shutdown Failed:%+v", err)
+		}
+		// Removed the extra cancel() call
+	}()
+
+	// Start the server
+	logrus.Infof("Server is running on port: %s", config.ServerPort)
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		logrus.Fatalf("listen: %s\n", err)
+	}
+
+	// Wait for the context to be done
+	<-ctx.Done()
+
+	logrus.Info("Server stopped")
 }

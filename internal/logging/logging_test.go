@@ -33,3 +33,5 @@ func TestInitialize(t *testing.T) {
 	// Cleanup test log directory
 	os.RemoveAll(logDir)
 }
+
+// Additional test cases can be added here for different log levels, formats, etc.

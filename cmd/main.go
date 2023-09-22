@@ -3,6 +3,11 @@
 package main
 
 import (
+	"log"
+	"net/http"
+	_ "net/http/pprof"
+	"time"
+
 	"github.com/pageza/chat-app/internal/config"
 	"github.com/pageza/chat-app/internal/logging"
 	"github.com/pageza/chat-app/internal/server"
@@ -13,19 +18,34 @@ import (
 // main is the entry point function for the chat application.
 func main() {
 
-	// Initialize logging: sets up the logging configurations.
-	logging.Initialize()
-
-	// Initialize configuration: loads environment variables and sets up configurations.
+	logrus.Info("Starting logging initialization")
+	if err := logging.Initialize(); err != nil {
+		logrus.Fatalf("Failed to initialize logging: %v", err)
+		return
+	}
+	logrus.Info("Logging initialized")
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
+	logrus.Info("Starting config initialization")
 	config.Initialize()
+	logrus.Info("Config initialized")
 
-	// Initialize the database: connects to the database and returns a handle to it.
+	logrus.Info("Starting database initialization")
 	database.GetDB()
+	logrus.Info("Database initialized")
 
-	// Start the server: initializes routes and starts listening for incoming HTTP requests.
+	logrus.Info("Starting server initialization")
 	server.StartServer()
+	logrus.Info("Server initialized")
 
-	// Log that the application has started: useful for debugging and monitoring.
+	tokenExpiration := "2h" // This should be loaded from your config
+	duration, err := time.ParseDuration(tokenExpiration)
+	if err != nil {
+		logrus.Fatalf("Invalid token expiration duration: %v", err)
+		return
+	}
+	logrus.Infof("Parsed duration: %v", duration)
+
 	logrus.Info("Application started")
-
 }

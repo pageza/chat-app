@@ -1,10 +1,8 @@
-// Package config handles the configuration settings for the chat application.
-// It reads sensitive variables from environment files and other configurations from a config file.
 package config
 
 import (
+	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -26,16 +24,31 @@ var (
 )
 
 // Initialize sets up the application's configuration.
-// It reads from both environment variables and configuration files.
 func Initialize() {
-	// Load the .env file for sensitive variables
-	err := godotenv.Load("/home/zach/projects/chat-app/.env")
+	// Debugging: Print the current working directory
+	dir, err := os.Getwd()
 	if err != nil {
-		// Log fatal error if .env file cannot be loaded
-		logrus.WithFields(logrus.Fields{
-			"file": ".env",
-		}).Fatal("Error loading .env file:", err)
+		logrus.Fatal("Getting working directory failed:", err)
 	}
+	fmt.Println("Current directory:", dir)
+
+	// Load the .env file for sensitive variables
+	err = godotenv.Load("/home/zach/projects/chat-app/.env")
+	if err != nil {
+		logrus.Fatal("Error loading .env file:", err)
+	}
+
+	// Set the path for the config file
+	viper.SetConfigFile("/home/zach/projects/chat-app/internal/config/config.yaml")
+
+	// Read the config file
+	err = viper.ReadInConfig()
+	if err != nil {
+		logrus.Fatalf("Error reading config file: %s", err)
+	}
+
+	// Debugging: Print all settings
+	fmt.Println("All settings:", viper.AllSettings())
 
 	// Read sensitive variables from environment
 	JwtSecret = os.Getenv("JWT_SECRET")
@@ -44,42 +57,24 @@ func Initialize() {
 
 	// Check if sensitive environment variables are set
 	if JwtSecret == "" || JwtIssuer == "" || PostgreDSN == "" {
-		logrus.WithFields(logrus.Fields{
-			"missing_vars": strings.Join([]string{"JWT_SECRET", "JWT_ISSUER", "POSTGRE_DSN"}, ", "),
-		}).Fatal("Sensitive environment variables are not set")
-	}
-
-	// Determine the environment (development or production)
-	env := os.Getenv("ENV")
-	if env == "" {
-		env = "development" // Default to development if ENV is not set
-	}
-
-	// Load non-sensitive configurations from config file
-	viper.SetConfigName("config")
-	viper.AddConfigPath("./config/")
-	err = viper.ReadInConfig()
-	if err != nil {
-		// Log fatal error if config file cannot be read
-		logrus.WithFields(logrus.Fields{
-			"file": "config",
-		}).Fatalf("Fatal error config file: %s \n", err)
+		logrus.Fatal("Sensitive environment variables are not set")
 	}
 
 	// Read configurations from config file
 	RedisAddr = viper.GetString("REDIS_ADDR")
 	TokenExpiration = viper.GetString("TOKEN_EXPIRATION")
-	CorsAllowedOrigins = []string{viper.GetString("CORS_ALLOWED_ORIGINS")}
-	CorsAllowedMethods = strings.Split(viper.GetString("CORS_ALLOWED_METHODS"), ",")
-	CorsAllowedHeaders = strings.Split(viper.GetString("CORS_ALLOWED_HEADERS"), ",")
+	CorsAllowedOrigins = viper.GetStringSlice("CORS_ALLOWED_ORIGINS")
+	CorsAllowedMethods = viper.GetStringSlice("CORS_ALLOWED_METHODS")
+	CorsAllowedHeaders = viper.GetStringSlice("CORS_ALLOWED_HEADERS")
 	ServerPort = viper.GetString("SERVER_PORT")
+	// Set default value if TokenExpiration is not set
+	if TokenExpiration == "" {
+		TokenExpiration = "2h" // Default value
+	}
 
 	// Validate the token expiration duration
 	_, err = time.ParseDuration(TokenExpiration)
 	if err != nil {
-		// Log fatal error if token expiration duration is invalid
-		logrus.WithFields(logrus.Fields{
-			"duration": TokenExpiration,
-		}).Fatalf("Invalid token expiration duration: %v", err)
+		logrus.Fatalf("Invalid token expiration duration: %v", err)
 	}
 }
