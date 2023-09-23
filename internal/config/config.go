@@ -33,17 +33,18 @@ func Initialize() {
 	fmt.Println("Current directory:", dir)
 
 	// Load the .env file for sensitive variables
-	err = godotenv.Load("/home/zach/projects/chat-app/.env")
+	// Using a relative path
+	err = godotenv.Load("../../.env") // Adjust the path as needed
 	if err != nil {
 		logrus.Fatal("Error loading .env file:", err)
 	}
 
 	// Set the path for the config file
-	viper.SetConfigFile("/home/zach/projects/chat-app/internal/config/config.yaml")
+	// Using a relative path
+	viper.SetConfigFile("./config.yaml") // Adjust the path as needed
 
 	// Read the config file
-	err = viper.ReadInConfig()
-	if err != nil {
+	if err := viper.ReadInConfig(); err != nil {
 		logrus.Fatalf("Error reading config file: %s", err)
 	}
 
@@ -54,6 +55,9 @@ func Initialize() {
 	JwtSecret = os.Getenv("JWT_SECRET")
 	JwtIssuer = os.Getenv("JWT_ISSUER")
 	PostgreDSN = os.Getenv("POSTGRE_DSN")
+	fmt.Println("JWT_SECRET:", os.Getenv("JWT_SECRET"))
+	fmt.Println("JWT_ISSUER:", os.Getenv("JWT_ISSUER"))
+	fmt.Println("POSTGRE_DSN:", os.Getenv("POSTGRE_DSN"))
 
 	// Check if sensitive environment variables are set
 	if JwtSecret == "" || JwtIssuer == "" || PostgreDSN == "" {

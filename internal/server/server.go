@@ -16,6 +16,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var serverExit = make(chan struct{}) // Added this line
+
 // StartServer initializes the HTTP server and listens for incoming requests.
 func StartServer() {
 	// Initialize Redis client
@@ -45,14 +47,15 @@ func StartServer() {
 		logrus.Info("Received signal, shutting down server.")
 
 		// Create a context with a 5-second timeout for the server to close
-		ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second) // <-- Changed here
-		defer cancel()                                                         // This is important
+		ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 
 		// Attempt to gracefully shutdown the server
 		if err := srv.Shutdown(ctx); err != nil {
 			logrus.Fatalf("Server Shutdown Failed:%+v", err)
 		}
-		// Removed the extra cancel() call
+
+		close(serverExit) // Added this line
 	}()
 
 	// Start the server
@@ -61,8 +64,16 @@ func StartServer() {
 		logrus.Fatalf("listen: %s\n", err)
 	}
 
-	// Wait for the context to be done
-	<-ctx.Done()
+	// Wait for the context to be done or server to exit
+	select { // Added this block
+	case <-ctx.Done():
+	case <-serverExit:
+	}
 
 	logrus.Info("Server stopped")
+}
+
+// StopServer allows you to programmatically stop the server
+func StopServer() {
+	close(serverExit) // Added this function
 }
