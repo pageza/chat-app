@@ -1,8 +1,10 @@
 package config
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -37,6 +39,10 @@ func TestInitializeCORS(t *testing.T) {
 		t.Fatalf("Failed to make request: %v", err)
 	}
 	defer resp.Body.Close()
+
+	actual := os.Getenv("CORS_ALLOW_ORIGINS")
+	expected := "http://example.com"
+	fmt.Printf("Actual: %s, Expected: %s\n", actual, expected)
 
 	// Check if CORS headers are set
 	assert.Equal(t, "http://example.com", resp.Header.Get("Access-Control-Allow-Origin"))

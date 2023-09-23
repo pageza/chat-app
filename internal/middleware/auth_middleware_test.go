@@ -36,9 +36,13 @@ func TestAuthMiddleware(t *testing.T) {
 	// Wrap the handler with AuthMiddleware
 	http.HandlerFunc(AuthMiddleware(handler)).ServeHTTP(rr, req)
 
+	// Call validateToken and check for errors
+	isValid := validateToken(req) // Corrected this line
+	if !isValid {
+		t.Fatalf("Token is not valid")
+	}
+
 	// Check the status code and body
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Equal(t, "OK", rr.Body.String())
 }
-
-// Additional test cases can be added here for invalid tokens, expired tokens, etc.

@@ -3,6 +3,7 @@ package auth
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -57,6 +58,11 @@ func initializeOrMockRedisClient() *redis.Client {
 
 // TestRegisterHandler tests the RegisterHandler function.
 func TestRegisterHandler(t *testing.T) {
+	testDSN := os.Getenv("TEST_DSN")
+	if testDSN == "" {
+		t.Fatalf("TEST_DSN environment variable not set")
+	}
+	fmt.Println("TEST_DSN is set to:", testDSN)
 	// Initialize or mock database
 	initializeOrMockDatabase(t)
 
@@ -116,7 +122,11 @@ func TestLoginHandler(t *testing.T) {
 	handler := http.HandlerFunc(LoginHandler)
 
 	handler.ServeHTTP(rr, req)
-
+	resp, err := http.Get("your API endpoint")
+	if err != nil {
+		t.Fatalf("HTTP request failed: %v", err)
+	}
+	fmt.Println("Actual response:", resp)
 	assert.Equal(t, http.StatusOK, rr.Code, "Expected response code to be 200")
 
 	// Check if token is returned in the response

@@ -6,9 +6,8 @@ package middleware
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
-	"sync"
-	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/pageza/chat-app/internal/common"
@@ -32,13 +31,24 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 // validateToken validates the JWT token from the request.
 func validateToken(r *http.Request) bool {
+	// Check if the request object is nil
+	if r == nil {
+		return false
+	}
+
 	cookie, err := r.Cookie("token")
-	if err != nil {
+	// Check if error occurred or cookie is nil
+	if err != nil || cookie == nil {
 		return false
 	}
 
 	// Check if the token is blacklisted
 	rdb := redis.GetRedisClient()
+	// Check if Redis client is nil
+	if rdb == nil {
+		return false
+	}
+
 	isBlacklisted, err := rdb.Get(context.TODO(), cookie.Value).Result()
 	if err == nil && isBlacklisted == "blacklisted" {
 		return false
@@ -47,8 +57,17 @@ func validateToken(r *http.Request) bool {
 	tokenStr := cookie.Value
 	claims := &jwt.StandardClaims{}
 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+		// Check if token is nil
+		if token == nil {
+			return nil, errors.New("token is nil")
+		}
 		return []byte(config.JwtSecret), nil
 	})
+
+	// Check if token is nil after parsing
+	if token == nil {
+		return false
+	}
 
 	return err == nil && token.Valid
 }
@@ -93,10 +112,10 @@ func CheckAuth(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]bool{"authenticated": true})
 }
 
-// limiter is a map to store the timestamp of the last request for each IP address.
-var limiter = make(map[string]time.Time)
+// // limiter is a map to store the timestamp of the last request for each IP address.
+// var limiter = make(map[string]time.Time)
 
-// mu is a mutex for synchronizing access to the limiter map.
-var mu sync.Mutex
+// // mu is a mutex for synchronizing access to the limiter map.
+// var mu sync.Mutex
 
-// ... (Rate limiting logic can go here)
+// // ... (Rate limiting logic can go here)
