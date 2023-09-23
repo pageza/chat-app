@@ -21,7 +21,7 @@ import (
 // AuthMiddleware is a middleware function for handling authentication.
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !validateToken(r) {
+		if !ValidateToken(r) {
 			unauthorizedAccess(w, r)
 			return
 		}
@@ -30,7 +30,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 }
 
 // validateToken validates the JWT token from the request.
-func validateToken(r *http.Request) bool {
+func ValidateToken(r *http.Request) bool {
 	// Check if the request object is nil
 	if r == nil {
 		return false
