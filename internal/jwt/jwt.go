@@ -24,13 +24,20 @@ import (
 // Returns:
 // - A signed JWT string
 // - An error if something goes wrong
+func init() {
+	config.Initialize()
+}
+
 func GenerateToken(user models.User) (string, error) {
 	// Parse the token expiration duration from the configuration
+	fmt.Println("Debug TokenExpiration in GenerateToken:", config.TokenExpiration)
+	logrus.Infof("JWT - TokenExpiration: %s", config.TokenExpiration)
+
 	expirationDuration, err := time.ParseDuration(config.TokenExpiration)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
 			"duration": config.TokenExpiration,
-		}).Fatalf("Invalid token expiration duration: %v", err)
+		}).Fatalf("Invalid token expiration duration jwt: %v", err)
 	}
 
 	// Calculate the expiration time for the token

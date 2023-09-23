@@ -4,18 +4,59 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/joho/godotenv"
 	"github.com/pageza/chat-app/internal/models"
 	"github.com/pageza/chat-app/pkg/database"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
+
+var TokenExpiration string
+
+func TestMain(m *testing.M) {
+	log.Println("Starting TestMain...") // This should appear in your test output
+
+	// Load .env.test
+	if err := godotenv.Load("/home/zach/projects/chat-app/.env"); err != nil {
+		log.Fatalf("Error loading .env: %v", err)
+	}
+
+	// Initialize Viper
+	viper.SetConfigFile("/home/zach/projects/chat-app/internal/config/config.yaml") // Adjust the path as needed
+	if err := viper.ReadInConfig(); err != nil {
+		log.Fatalf("Error reading config.yaml: %v", err)
+	}
+
+	TokenExpiration = viper.GetString("TOKEN_EXPIRATION")
+
+	fmt.Println("Debug TokenExpiration in auth test:", TokenExpiration)
+
+	// Check if TokenExpiration is empty
+	if TokenExpiration == "" {
+		log.Fatalf("TokenExpiration is empty")
+	}
+
+	_, err := time.ParseDuration(TokenExpiration)
+	if err != nil {
+		log.Fatalf("Invalid token expiration duration in auth test: %v", err)
+	}
+	// Run the tests
+	code := m.Run()
+
+	// Teardown if needed
+
+	os.Exit(code)
+}
 
 // Initialize or mock your database here
 var db *gorm.DB

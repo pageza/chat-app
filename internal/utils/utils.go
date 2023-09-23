@@ -17,7 +17,7 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	// Write the health check message to the response
-	fmt.Fprintf(w, "Server is up and running!")
+	fmt.Fprintf(w, "OK")
 }
 
 // ValidateUser compares the hashed password stored in the User model with the provided plaintext password.

@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	_ "net/http/pprof"
-	"time"
 
 	"github.com/pageza/chat-app/internal/config"
 	"github.com/pageza/chat-app/internal/logging"
@@ -29,6 +28,7 @@ func main() {
 	}()
 	logrus.Info("Starting config initialization")
 	config.Initialize()
+	logrus.Infof("Config - TokenExpiration: %s", config.TokenExpiration)
 	logrus.Info("Config initialized")
 
 	logrus.Info("Starting database initialization")
@@ -39,13 +39,13 @@ func main() {
 	server.StartServer()
 	logrus.Info("Server initialized")
 
-	tokenExpiration := "2h" // This should be loaded from your config
-	duration, err := time.ParseDuration(tokenExpiration)
-	if err != nil {
-		logrus.Fatalf("Invalid token expiration duration: %v", err)
-		return
-	}
-	logrus.Infof("Parsed duration: %v", duration)
+	// tokenExpiration := "2h" // This should be loaded from your config
+	// duration, err := time.ParseDuration(tokenExpiration)
+	// if err != nil {
+	// 	logrus.Fatalf("Invalid token expiration duration main: %v", err)
+	// 	return
+	// }
+	// logrus.Infof("Parsed duration: %v", duration)
 
 	logrus.Info("Application started")
 }

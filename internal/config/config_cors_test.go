@@ -11,6 +11,7 @@ import (
 )
 
 func TestInitializeCORS(t *testing.T) {
+	Initialize()
 	// Initialize CORS middleware
 	corsMiddleware := InitializeCORS()
 
@@ -31,7 +32,7 @@ func TestInitializeCORS(t *testing.T) {
 	}
 
 	// Add Origin header to simulate a CORS request
-	req.Header.Set("Origin", "http://example.com")
+	req.Header.Set("Origin", "http://localhost")
 
 	// Perform the request
 	resp, err := client.Do(req)
@@ -41,11 +42,11 @@ func TestInitializeCORS(t *testing.T) {
 	defer resp.Body.Close()
 
 	actual := os.Getenv("CORS_ALLOW_ORIGINS")
-	expected := "http://example.com"
+	expected := "http://localhost"
 	fmt.Printf("Actual: %s, Expected: %s\n", actual, expected)
 
 	// Check if CORS headers are set
-	assert.Equal(t, "http://example.com", resp.Header.Get("Access-Control-Allow-Origin"))
+	assert.Equal(t, "http://localhost", resp.Header.Get("Access-Control-Allow-Origin"))
 	assert.Equal(t, "true", resp.Header.Get("Access-Control-Allow-Credentials"))
 	assert.Equal(t, "Authorization", resp.Header.Get("Access-Control-Expose-Headers"))
 }
