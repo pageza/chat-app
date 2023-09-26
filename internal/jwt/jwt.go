@@ -28,8 +28,8 @@ func init() {
 	config.Initialize()
 }
 
-func GenerateToken(user models.User) (string, error) {
-	// Parse the token expiration duration from the configuration
+func GenerateToken(user models.User) (string, string, error) {
+	// Parse the token expiration duration from the configuration for access token
 	fmt.Println("Debug TokenExpiration in GenerateToken:", config.TokenExpiration)
 	logrus.Infof("JWT - TokenExpiration: %s", config.TokenExpiration)
 
@@ -38,21 +38,40 @@ func GenerateToken(user models.User) (string, error) {
 		logrus.WithFields(logrus.Fields{
 			"duration": config.TokenExpiration,
 		}).Fatalf("Invalid token expiration duration jwt: %v", err)
+		return "", "", err
 	}
 
-	// Calculate the expiration time for the token
+	// Calculate the expiration time for the access token
 	expirationTime := time.Now().Add(expirationDuration).Unix()
 
-	// Create the claims for the token
+	// Create the claims for the access token
 	claims := &jwt.StandardClaims{
 		ExpiresAt: expirationTime,
 		Issuer:    config.JwtIssuer,
 		Subject:   user.Username,
 	}
 
-	// Generate the token with the claims
+	// Generate the access token with the claims
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(config.JwtSecret))
+	accessToken, err := token.SignedString([]byte(config.JwtSecret))
+	if err != nil {
+		return "", "", err
+	}
+
+	// Generate refresh token with longer expiration (e.g., 24 hours)
+	refreshExpirationTime := time.Now().Add(24 * time.Hour).Unix()
+	refreshClaims := &jwt.StandardClaims{
+		ExpiresAt: refreshExpirationTime,
+		Issuer:    config.JwtIssuer,
+		Subject:   user.Username,
+	}
+	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
+	refreshTokenString, err := refreshToken.SignedString([]byte(config.JwtSecret))
+	if err != nil {
+		return "", "", err
+	}
+
+	return accessToken, refreshTokenString, nil
 }
 
 // SetTokenCookie sets a JWT as an HttpOnly cookie.
@@ -94,7 +113,7 @@ func ParseToken(tokenString string) (*jwt.Token, error) {
 // - w: The http.ResponseWriter to write the cookie to
 // - user: The user for whom the token is generated
 func GenerateTokenAndSetCookie(w http.ResponseWriter, user models.User) {
-	tokenString, err := GenerateToken(user)
+	accessToken, refreshToken, err := GenerateToken(user) // Updated this line
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
 			"user": user.Username,
@@ -103,7 +122,15 @@ func GenerateTokenAndSetCookie(w http.ResponseWriter, user models.User) {
 		errors.RespondWithError(w, apiErr)
 		return
 	}
-	SetTokenCookie(w, tokenString)
+	SetTokenCookie(w, accessToken) // Assuming this sets the access token cookie
+
+	// Set the refresh token as a cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		Expires:  time.Now().Add(48 * time.Hour), // Set your desired expiration time
+		HttpOnly: true,
+	})
 }
 
 // ClearTokenCookie clears the JWT cookie.

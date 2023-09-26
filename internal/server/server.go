@@ -13,13 +13,14 @@ import (
 	"github.com/pageza/chat-app/internal/middleware"
 	"github.com/pageza/chat-app/internal/redis"
 	"github.com/pageza/chat-app/internal/routes"
+	"github.com/pageza/chat-app/pkg/database"
 	"github.com/sirupsen/logrus"
 )
 
 var serverExit = make(chan struct{}) // Added this line
 
 // StartServer initializes the HTTP server and listens for incoming requests.
-func StartServer() {
+func StartServer(db *database.GormDatabase) {
 	// Initialize Redis client
 	rdb := redis.GetRedisClient()
 

@@ -21,10 +21,14 @@ import (
 	"gorm.io/gorm"
 )
 
+type AuthHandler struct {
+	DB *database.GormDatabase
+}
+
 // RegisterHandler handles user registration.
 // It validates the incoming request, saves the user to the database,
 // and returns a JWT token upon successful registration.
-func RegisterHandler(w http.ResponseWriter, r *http.Request) {
+func (a *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	// Decode the incoming JSON payload to a User model
 	var user models.User
 	err := json.NewDecoder(r.Body).Decode(&user)
@@ -44,7 +48,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	var currentRetry = 0
 	var result *gorm.DB
 	for currentRetry < maxRetries {
-		result = database.DB.Create(&user)
+		result = a.DB.Create(&user)
 		if result.Error == nil {
 			break
 		}
@@ -64,12 +68,22 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate JWT token and set it as a cookie
-	tokenString, err := jwtI.GenerateToken(user)
+	accessToken, refreshToken, err := jwtI.GenerateToken(user)
 	if err != nil {
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusInternalServerError, "Could not log in"))
 		return
 	}
-	jwtI.SetTokenCookie(w, tokenString)
+	jwtI.SetTokenCookie(w, accessToken) // This sets the access token cookie
+
+	// Set the refresh token as a secure, HttpOnly cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		HttpOnly: true,
+		Secure:   true, // Set to true if using HTTPS
+		Path:     "/",
+	})
+
 	w.WriteHeader(http.StatusCreated)
 	fmt.Fprintf(w, "User successfully registered and logged in")
 }
@@ -122,13 +136,23 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusUnauthorized, "Invalid credentials"))
 		return
 	}
-	tokenString, err := jwtI.GenerateToken(dbUser)
+	accessToken, refreshToken, err := jwtI.GenerateToken(dbUser)
 	if err != nil {
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusInternalServerError, "Could not log in"))
 		return
 	}
-	jwtI.SetTokenCookie(w, tokenString)
-	jsonResponse := map[string]string{"token": tokenString}
+	jwtI.SetTokenCookie(w, accessToken) // This sets the access token cookie
+
+	// Set the refresh token as a secure, HttpOnly cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		HttpOnly: true,
+		Secure:   true, // Set to true if using HTTPS
+		Path:     "/",
+	})
+
+	jsonResponse := map[string]string{"token": accessToken}
 	utils.SendJSONResponse(w, http.StatusOK, jsonResponse)
 }
 

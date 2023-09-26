@@ -32,20 +32,18 @@ func main() {
 	logrus.Info("Config initialized")
 
 	logrus.Info("Starting database initialization")
-	database.GetDB()
+	db, err := database.NewGormDatabase()
+	if err != nil {
+		logrus.Fatalf("Database initialization failed: %v", err)
+		return
+	}
+	authHandler := &AuthHandler{DB: db}
+
 	logrus.Info("Database initialized")
 
 	logrus.Info("Starting server initialization")
-	server.StartServer()
+	server.StartServer(db)
 	logrus.Info("Server initialized")
-
-	// tokenExpiration := "2h" // This should be loaded from your config
-	// duration, err := time.ParseDuration(tokenExpiration)
-	// if err != nil {
-	// 	logrus.Fatalf("Invalid token expiration duration main: %v", err)
-	// 	return
-	// }
-	// logrus.Infof("Parsed duration: %v", duration)
 
 	logrus.Info("Application started")
 }
