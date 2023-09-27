@@ -1,6 +1,5 @@
 // Package routes sets up all the routes for the application.
 // This includes routes for health checks, authentication, chat functionality, and user information.
-
 package routes
 
 import (
@@ -13,10 +12,12 @@ import (
 	"github.com/pageza/chat-app/internal/middleware"
 	"github.com/pageza/chat-app/internal/user"
 	"github.com/pageza/chat-app/internal/utils"
+	"github.com/pageza/chat-app/pkg/database"
 )
 
-// InitializeRoutes initializes all the routes for the application.
-func InitializeRoutes(r *mux.Router, rdb *redis.Client) {
+func InitializeRoutes(r *mux.Router, rdb *redis.Client, db database.Database) {
+	authHandler := &auth.AuthHandler{DB: db}
+
 	// Health check route
 	r.HandleFunc("/health", utils.HealthCheckHandler).Methods("GET")
 
@@ -26,11 +27,11 @@ func InitializeRoutes(r *mux.Router, rdb *redis.Client) {
 	r.HandleFunc("/receive", chat.ReceiveMessageHandler).Methods("GET")
 
 	// Authentication-related routes
-	r.HandleFunc("/register", auth.RegisterHandler).Methods("POST")
-	r.HandleFunc("/login", auth.LoginHandler).Methods("POST")
+	r.HandleFunc("/register", authHandler.RegisterHandler).Methods("POST")
+	r.HandleFunc("/login", authHandler.LoginHandler).Methods("POST")
 	// Logout route with inline function to pass Redis client
 	r.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
-		auth.LogoutHandler(w, r, rdb)
+		authHandler.LogoutHandler(w, r, rdb)
 	}).Methods("POST")
 
 	// User information route with authentication middleware

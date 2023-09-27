@@ -14,10 +14,9 @@ type Database interface {
 	AutoMigrateDB() error
 	CreateUser(user *models.User) error
 	GetUserByUsername(username string) (*models.User, error)
-	// Additional methods as needed
-	UpdateLastLoginTime(user *models.User) error      // To update the last login time of the user
-	HandleFailedLoginAttempt(user *models.User) error // To handle failed login attempts, if needed
-	// Any other methods related to login/logout that interact with the database
+	UpdateLastLoginTime(user *models.User) error
+	HandleFailedLoginAttempt(user *models.User) error
+	Where(query interface{}, args ...interface{}) *gorm.DB
 }
 
 type GormDatabase struct {
@@ -36,7 +35,6 @@ func NewGormDatabase() (*GormDatabase, error) {
 }
 
 func (g *GormDatabase) InitializeDB() (*gorm.DB, error) {
-	// Perform any needed initialization logic here
 	return g.DB, nil
 }
 
@@ -54,4 +52,18 @@ func (g *GormDatabase) GetUserByUsername(username string) (*models.User, error) 
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (g *GormDatabase) UpdateLastLoginTime(user *models.User) error {
+	// Implement the method
+	return nil
+}
+
+func (g *GormDatabase) HandleFailedLoginAttempt(user *models.User) error {
+	// Implement the method
+	return nil
+}
+
+func (g *GormDatabase) Where(query interface{}, args ...interface{}) *gorm.DB {
+	return g.DB.Where(query, args...)
 }

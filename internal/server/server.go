@@ -29,7 +29,7 @@ func StartServer(db *database.GormDatabase) {
 	r.Use(middleware.RateLimitMiddleware)
 
 	// Add your routes here
-	routes.InitializeRoutes(r, rdb)
+	routes.InitializeRoutes(r, rdb, db)
 
 	// Create a new HTTP server
 	srv := &http.Server{

@@ -3,6 +3,7 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -18,22 +19,24 @@ import (
 	"github.com/pageza/chat-app/internal/utils"
 	"github.com/pageza/chat-app/pkg/database"
 	"github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 )
 
 type AuthHandler struct {
-	DB *database.GormDatabase
+	DB           database.Database
+	JwtGenerator jwtI.JwtGenerator // Add this line
 }
 
-// RegisterHandler handles user registration.
-// It validates the incoming request, saves the user to the database,
-// and returns a JWT token upon successful registration.
+// RedisClient is an interface representing the methods of the Redis client
+// that are used in this package.
+type RedisClient interface {
+	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd
+	// Add other methods as needed
+}
+
 func (a *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
-	// Decode the incoming JSON payload to a User model
 	var user models.User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		// Log the error and send a response
 		logrus.WithFields(logrus.Fields{
 			"method": r.Method,
 			"url":    r.URL.String(),
@@ -43,21 +46,8 @@ func (a *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retry logic for database operation
-	const maxRetries = 3
-	var currentRetry = 0
-	var result *gorm.DB
-	for currentRetry < maxRetries {
-		result = a.DB.Create(&user)
-		if result.Error == nil {
-			break
-		}
-		currentRetry++
-		time.Sleep(2 * time.Second)
-	}
-
-	// Handle registration failure
-	if currentRetry == maxRetries || result.Error != nil {
+	err = a.DB.CreateUser(&user)
+	if err != nil {
 		logrus.WithFields(logrus.Fields{
 			"method": r.Method,
 			"url":    r.URL.String(),
@@ -67,20 +57,18 @@ func (a *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate JWT token and set it as a cookie
 	accessToken, refreshToken, err := jwtI.GenerateToken(user)
 	if err != nil {
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusInternalServerError, "Could not log in"))
 		return
 	}
-	jwtI.SetTokenCookie(w, accessToken) // This sets the access token cookie
+	jwtI.SetTokenCookie(w, accessToken)
 
-	// Set the refresh token as a secure, HttpOnly cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    refreshToken,
 		HttpOnly: true,
-		Secure:   true, // Set to true if using HTTPS
+		Secure:   true,
 		Path:     "/",
 	})
 
@@ -88,15 +76,10 @@ func (a *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "User successfully registered and logged in")
 }
 
-// LoginHandler handles user login.
-// It validates the incoming request, verifies the user credentials,
-// and returns a JWT token upon successful login.
-func LoginHandler(w http.ResponseWriter, r *http.Request) {
-	// Decode the incoming JSON payload to a User model
+func (a *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		// Log the error and send a response
 		logrus.WithFields(logrus.Fields{
 			"method": r.Method,
 			"url":    r.URL.String(),
@@ -106,21 +89,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Retry logic for database operation
-	const maxRetries = 3
-	var currentRetry = 0
-	var dbUser models.User
-	for currentRetry < maxRetries {
-		database.DB.Where("username = ?", user.Username).First(&dbUser)
-		if dbUser.ID != 0 {
-			break
-		}
-		currentRetry++
-		time.Sleep(2 * time.Second)
-	}
-
-	// Handle login failure
-	if currentRetry == maxRetries || dbUser.ID == 0 {
+	dbUser, err := a.DB.GetUserByUsername(user.Username)
+	if err != nil || dbUser.ID == 0 {
 		logrus.WithFields(logrus.Fields{
 			"method": r.Method,
 			"url":    r.URL.String(),
@@ -130,25 +100,23 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate user credentials and generate JWT token
-	err = utils.ValidateUser(&dbUser, user.Password)
+	err = utils.ValidateUser(dbUser, user.Password)
 	if err != nil {
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusUnauthorized, "Invalid credentials"))
 		return
 	}
-	accessToken, refreshToken, err := jwtI.GenerateToken(dbUser)
+	accessToken, refreshToken, err := jwtI.GenerateToken(*dbUser)
 	if err != nil {
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusInternalServerError, "Could not log in"))
 		return
 	}
-	jwtI.SetTokenCookie(w, accessToken) // This sets the access token cookie
+	jwtI.SetTokenCookie(w, accessToken)
 
-	// Set the refresh token as a secure, HttpOnly cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    refreshToken,
 		HttpOnly: true,
-		Secure:   true, // Set to true if using HTTPS
+		Secure:   true,
 		Path:     "/",
 	})
 
@@ -156,11 +124,13 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	utils.SendJSONResponse(w, http.StatusOK, jsonResponse)
 }
 
+// The rest of the file remains the same.
+
 // LogoutHandler handles user logout.
 // It invalidates the user's JWT token and removes it from the cookie.
-func LogoutHandler(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
+func (a *AuthHandler) LogoutHandler(w http.ResponseWriter, r *http.Request, redisClient RedisClient) {
 	// Validate the incoming request and Redis client
-	if r == nil || rdb == nil {
+	if r == nil || redisClient == nil {
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusInternalServerError, "Internal server error"))
 		return
 	}
@@ -190,7 +160,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request, rdb *redis.Client) {
 	const maxRetries = 3
 	var currentRetry = 0
 	for currentRetry < maxRetries {
-		err = redisI.BlacklistToken(rdb, tokenString, expirationTime)
+		err = redisI.BlacklistToken(context.TODO(), redisClient, actualToken, expirationTime)
 		if err == nil {
 			break
 		}

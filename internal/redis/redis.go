@@ -1,6 +1,5 @@
 // Package redis provides utilities for interacting with Redis.
 // This includes initializing the Redis client, blacklisting tokens, and checking rate limits.
-
 package redis
 
 import (
@@ -12,6 +11,12 @@ import (
 	"github.com/pageza/chat-app/internal/config"
 	"github.com/sirupsen/logrus"
 )
+
+// RedisClient is an interface that describes the Set method of a Redis client.
+type RedisClient interface {
+	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd
+	// You can add other methods as needed.
+}
 
 // rdb is the Redis client that will be used throughout the application.
 var rdb *redis.Client
@@ -37,13 +42,13 @@ func GetRedisClient() *redis.Client {
 }
 
 // BlacklistToken blacklists a given JWT token in Redis.
-func BlacklistToken(rdb *redis.Client, tokenString string, expirationTime int64) error {
+func BlacklistToken(ctx context.Context, client RedisClient, tokenString string, expirationTime int64) error {
 	const maxRetries = 3 // Maximum number of retries
 	var currentRetry = 0 // Current retry count
 
 	// Retry logic for blacklisting the token
 	for currentRetry < maxRetries {
-		err := rdb.Set(context.TODO(), tokenString, "blacklisted", time.Until(time.Unix(expirationTime, 0))).Err()
+		err := client.Set(ctx, tokenString, "blacklisted", time.Until(time.Unix(expirationTime, 0))).Err()
 		if err == nil {
 			return nil // Operation was successful, return
 		}

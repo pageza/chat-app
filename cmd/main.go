@@ -37,7 +37,6 @@ func main() {
 		logrus.Fatalf("Database initialization failed: %v", err)
 		return
 	}
-	authHandler := &AuthHandler{DB: db}
 
 	logrus.Info("Database initialized")
 

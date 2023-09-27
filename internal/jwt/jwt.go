@@ -15,6 +15,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type JwtGenerator interface {
+	GenerateToken(user models.User) (string, string, error)
+}
+
 // GenerateToken generates a JWT for a given user.
 // The token will contain claims like the username and expiration time.
 //
