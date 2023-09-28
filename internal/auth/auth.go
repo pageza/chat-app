@@ -34,6 +34,7 @@ type RedisClient interface {
 }
 
 func (a *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Entering RegisterHandler")
 	var user models.User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
@@ -47,6 +48,8 @@ func (a *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = a.DB.CreateUser(&user)
+	fmt.Println("Debug: CreateUser error:", err)
+
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
 			"method": r.Method,
@@ -77,6 +80,7 @@ func (a *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Entering LoginHandler")
 	var user models.User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
@@ -90,6 +94,24 @@ func (a *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	dbUser, err := a.DB.GetUserByUsername(user.Username)
+	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"method": r.Method,
+			"url":    r.URL.String(),
+			"ip":     r.RemoteAddr,
+		}).Warn("User not found")
+		errors.RespondWithError(w, errors.NewAPIError(http.StatusUnauthorized, "User not found"))
+		return
+	}
+	if err != nil || dbUser == nil {
+		logrus.WithFields(logrus.Fields{
+			"method": r.Method,
+			"url":    r.URL.String(),
+			"ip":     r.RemoteAddr,
+		}).Warn("Invalid credentials after max retries")
+		errors.RespondWithError(w, errors.NewAPIError(http.StatusUnauthorized, "Invalid credentials"))
+		return
+	}
 	if err != nil || dbUser.ID == 0 {
 		logrus.WithFields(logrus.Fields{
 			"method": r.Method,
@@ -101,6 +123,17 @@ func (a *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = utils.ValidateUser(dbUser, user.Password)
+	fmt.Println("Debug: ValidateUser error:", err)
+
+	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"method": r.Method,
+			"url":    r.URL.String(),
+			"ip":     r.RemoteAddr,
+		}).Warn("Invalid password")
+		errors.RespondWithError(w, errors.NewAPIError(http.StatusUnauthorized, "Invalid password"))
+		return
+	}
 	if err != nil {
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusUnauthorized, "Invalid credentials"))
 		return
@@ -129,6 +162,7 @@ func (a *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 // LogoutHandler handles user logout.
 // It invalidates the user's JWT token and removes it from the cookie.
 func (a *AuthHandler) LogoutHandler(w http.ResponseWriter, r *http.Request, redisClient RedisClient) {
+	fmt.Println("Entering LogoutHandler")
 	// Validate the incoming request and Redis client
 	if r == nil || redisClient == nil {
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusInternalServerError, "Internal server error"))

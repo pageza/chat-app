@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,11 +14,14 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
 	"github.com/pageza/chat-app/internal/auth"
+	"github.com/pageza/chat-app/internal/config"
 	"github.com/pageza/chat-app/internal/jwt"
 	"github.com/pageza/chat-app/internal/models"
+	"github.com/pageza/chat-app/internal/utils"
 )
 
 type MockJwt struct {
@@ -148,6 +152,7 @@ func TestHandlers(t *testing.T) {
 }
 
 func TestLoginHandler(t *testing.T) {
+	config.Initialize()
 	// Initialize dependencies and mock objects
 	dbMock := new(MockDatabase)
 	jwtMock := new(MockJwt)
@@ -161,11 +166,24 @@ func TestLoginHandler(t *testing.T) {
 	tokenGenerationError := errors.New("token generation failed")
 
 	t.Run("Valid credentials", func(t *testing.T) {
+		fmt.Println("Entering test: Valid credentials")
+		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("testpassword"), bcrypt.DefaultCost)
 		user := models.User{
+			ID:       1,
 			Username: "testuser",
-			Password: "testpassword",
+			Password: string(hashedPassword),
 		}
+
+		fmt.Println("Debug: Hashed password:", string(hashedPassword))
+
+		err := utils.ValidateUser(&user, "testpassword")
+		if err != nil {
+			t.Fatalf("Password validation failed: %v", err)
+		}
+		fmt.Println("Running test: Valid credentials- ", user)
+
 		dbMock.On("GetUserByUsername", "testuser").Return(&user, nil)
+		jwtMock.On("GenerateToken", user).Return("accessToken", "refreshToken", nil)
 		jwtMock.On("GenerateToken", user).Return("accessToken", "refreshToken", nil)
 
 		payload, _ := json.Marshal(user)
@@ -176,11 +194,14 @@ func TestLoginHandler(t *testing.T) {
 	})
 
 	t.Run("Token generation failure", func(t *testing.T) {
+		fmt.Println("Entering test: Token generation failure")
+		fmt.Println("Running test: Token generation failure")
 		user := models.User{
 			Username: "testuser",
 			Password: "testpassword",
 		}
 		dbMock.On("GetUserByUsername", "testuser").Return(&user, nil)
+		jwtMock.On("GenerateToken", user).Return("", "", tokenGenerationError)
 		jwtMock.On("GenerateToken", user).Return("", "", tokenGenerationError)
 
 		payload, _ := json.Marshal(user)
@@ -191,6 +212,8 @@ func TestLoginHandler(t *testing.T) {
 	})
 
 	t.Run("Invalid credentials", func(t *testing.T) {
+		fmt.Println("Entering test: Invalid credentials")
+		fmt.Println("Running test: Invalid credentials")
 		user := models.User{
 			Username: "wronguser",
 			Password: "wrongpassword",
