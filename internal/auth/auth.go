@@ -80,10 +80,12 @@ func (a *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Entering LoginHandler")
+	fmt.Println("Debug: Starting LoginHandler") // Debug print
+
 	var user models.User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
+		fmt.Println("Debug: Invalid request payload") // Debug print
 		logrus.WithFields(logrus.Fields{
 			"method": r.Method,
 			"url":    r.URL.String(),
@@ -94,7 +96,8 @@ func (a *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	dbUser, err := a.DB.GetUserByUsername(user.Username)
-	if err != nil {
+	if err != nil || dbUser == nil {
+		fmt.Println("Debug: User not found") // Debug print
 		logrus.WithFields(logrus.Fields{
 			"method": r.Method,
 			"url":    r.URL.String(),
@@ -103,29 +106,10 @@ func (a *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusUnauthorized, "User not found"))
 		return
 	}
-	if err != nil || dbUser == nil {
-		logrus.WithFields(logrus.Fields{
-			"method": r.Method,
-			"url":    r.URL.String(),
-			"ip":     r.RemoteAddr,
-		}).Warn("Invalid credentials after max retries")
-		errors.RespondWithError(w, errors.NewAPIError(http.StatusUnauthorized, "Invalid credentials"))
-		return
-	}
-	if err != nil || dbUser.ID == 0 {
-		logrus.WithFields(logrus.Fields{
-			"method": r.Method,
-			"url":    r.URL.String(),
-			"ip":     r.RemoteAddr,
-		}).Warn("Invalid credentials after max retries")
-		errors.RespondWithError(w, errors.NewAPIError(http.StatusUnauthorized, "Invalid credentials"))
-		return
-	}
 
 	err = utils.ValidateUser(dbUser, user.Password)
-	fmt.Println("Debug: ValidateUser error:", err)
-
 	if err != nil {
+		fmt.Println("Debug: Invalid password") // Debug print
 		logrus.WithFields(logrus.Fields{
 			"method": r.Method,
 			"url":    r.URL.String(),
@@ -134,15 +118,21 @@ func (a *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusUnauthorized, "Invalid password"))
 		return
 	}
-	if err != nil {
-		errors.RespondWithError(w, errors.NewAPIError(http.StatusUnauthorized, "Invalid credentials"))
-		return
-	}
+
+	fmt.Println("Debug: About to call GenerateToken") // Debug print
+	fmt.Printf("Debug: dbUser type: %T, content: %+v\n", dbUser, dbUser)
+
 	accessToken, refreshToken, err := jwtI.GenerateToken(*dbUser)
+
+	fmt.Println("Debug: GenerateToken called") // Debug print
+
 	if err != nil {
+		fmt.Println("Debug: Entering error block")      // Debug print
+		fmt.Println("Debug: GenerateToken error:", err) // Debug print
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusInternalServerError, "Could not log in"))
 		return
 	}
+
 	jwtI.SetTokenCookie(w, accessToken)
 
 	http.SetCookie(w, &http.Cookie{

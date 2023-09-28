@@ -24,8 +24,13 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 // It uses bcrypt's CompareHashAndPassword function for secure password comparison.
 // Returns an error if the passwords do not match.
 func ValidateUser(user *models.User, password string) error {
+
+	// Convert to byte slices
+	hashedPassword := []byte(user.Password)
+	plaintextPassword := []byte(password)
+
 	// Compare the hashed password in the user model with the provided plaintext password
-	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	err := bcrypt.CompareHashAndPassword(hashedPassword, plaintextPassword)
 
 	// Return the result of the comparison (nil if passwords match, error otherwise)
 	return err
