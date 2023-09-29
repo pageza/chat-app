@@ -19,7 +19,6 @@ import (
 
 	"github.com/pageza/chat-app/internal/auth"
 	"github.com/pageza/chat-app/internal/config"
-	"github.com/pageza/chat-app/internal/jwt"
 	"github.com/pageza/chat-app/internal/models"
 	"github.com/pageza/chat-app/internal/utils"
 )
@@ -76,6 +75,15 @@ func (m *MockDatabase) Where(query interface{}, args ...interface{}) *gorm.DB {
 	return callArgs.Get(0).(*gorm.DB)
 }
 
+func (m *MockDatabase) GetUserByID(userID string) (*models.User, error) {
+	args := m.Called(userID)
+	user, ok := args.Get(0).(*models.User)
+	if !ok {
+		return nil, args.Error(1)
+	}
+	return user, args.Error(1)
+}
+
 type RedisClient interface {
 	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd
 }
@@ -91,6 +99,7 @@ func (m *MockRedisClient) Set(ctx context.Context, key string, value interface{}
 
 func TestHandlers(t *testing.T) {
 	mockDB := new(MockDatabase)
+	mockJwt := new(MockJwt)
 	mockRedisClient := new(MockRedisClient)
 
 	mockDB.On("InitializeDB").Return(new(gorm.DB), nil)
@@ -112,7 +121,7 @@ func TestHandlers(t *testing.T) {
 			Username: "testuser",
 		}
 
-		accessToken, _, err := jwt.GenerateToken(user)
+		accessToken, _, err := mockJwt.GenerateToken(user)
 		if err != nil {
 			t.Fatalf("Could not generate token: %v", err)
 		}
@@ -157,8 +166,7 @@ func TestLoginHandler(t *testing.T) {
 	dbMock := new(MockDatabase)
 	jwtMock := new(MockJwt)
 	authHandler := &auth.AuthHandler{
-		DB:           dbMock,
-		JwtGenerator: jwtMock,
+		DB: dbMock,
 	}
 
 	// Define specific errors for use in tests

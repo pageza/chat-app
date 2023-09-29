@@ -15,9 +15,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type JwtGenerator interface {
+// JwtService is an interface for JWT-related operations.
+type JwtService interface {
 	GenerateToken(user models.User) (string, string, error)
+	ParseToken(tokenString string) (*jwt.Token, error)
+	SetTokenCookie(w http.ResponseWriter, token string)
+	ClearTokenCookie(w http.ResponseWriter)
 }
+type JwtManager struct{}
 
 // GenerateToken generates a JWT for a given user.
 // The token will contain claims like the username and expiration time.
@@ -32,7 +37,7 @@ func init() {
 	config.Initialize()
 }
 
-func GenerateToken(user models.User) (string, string, error) {
+func (jm *JwtManager) GenerateToken(user models.User) (string, string, error) {
 	// Parse the token expiration duration from the configuration for access token
 	fmt.Println("Debug TokenExpiration in GenerateToken:", config.TokenExpiration)
 	logrus.Infof("JWT - TokenExpiration: %s", config.TokenExpiration)
@@ -83,7 +88,7 @@ func GenerateToken(user models.User) (string, string, error) {
 // Parameters:
 // - w: The http.ResponseWriter to write the cookie to
 // - token: The JWT string to set as a cookie
-func SetTokenCookie(w http.ResponseWriter, token string) {
+func (jm *JwtManager) SetTokenCookie(w http.ResponseWriter, token string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
 		Value:    token,
@@ -99,7 +104,7 @@ func SetTokenCookie(w http.ResponseWriter, token string) {
 // Returns:
 // - A pointer to the parsed jwt.Token
 // - An error if something goes wrong
-func ParseToken(tokenString string) (*jwt.Token, error) {
+func (jm *JwtManager) ParseToken(tokenString string) (*jwt.Token, error) {
 	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			logrus.WithFields(logrus.Fields{
@@ -117,7 +122,8 @@ func ParseToken(tokenString string) (*jwt.Token, error) {
 // - w: The http.ResponseWriter to write the cookie to
 // - user: The user for whom the token is generated
 func GenerateTokenAndSetCookie(w http.ResponseWriter, user models.User) {
-	accessToken, refreshToken, err := GenerateToken(user) // Updated this line
+	jwtManager := &JwtManager{}
+	accessToken, refreshToken, err := jwtManager.GenerateToken(user) // Updated this line
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
 			"user": user.Username,
@@ -126,7 +132,7 @@ func GenerateTokenAndSetCookie(w http.ResponseWriter, user models.User) {
 		errors.RespondWithError(w, apiErr)
 		return
 	}
-	SetTokenCookie(w, accessToken) // Assuming this sets the access token cookie
+	jwtManager.SetTokenCookie(w, accessToken) // Assuming this sets the access token cookie
 
 	// Set the refresh token as a cookie
 	http.SetCookie(w, &http.Cookie{
@@ -141,7 +147,7 @@ func GenerateTokenAndSetCookie(w http.ResponseWriter, user models.User) {
 //
 // Parameters:
 // - w: The http.ResponseWriter to clear the cookie from
-func ClearTokenCookie(w http.ResponseWriter) {
+func (jm *JwtManager) ClearTokenCookie(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
 		Value:    "",

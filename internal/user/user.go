@@ -6,11 +6,38 @@ package user
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/pageza/chat-app/internal/middleware"
+	"github.com/pageza/chat-app/internal/models"
+	"github.com/pageza/chat-app/pkg/database"
 )
+
+type UserDB interface {
+	GetUserByID(userID string) (*models.User, error)
+}
+
+// TokenValidator is an interface for JWT token validation.
+type TokenValidator interface {
+	ValidateToken(r *http.Request) bool
+}
+
+// RealAuth is a concrete implementation of the TokenValidator interface.
+type RealAuth struct{}
+
+// ValidateToken calls the actual ValidateToken function from the middleware.
+func (ra *RealAuth) ValidateToken(r *http.Request) bool {
+	return middleware.ValidateToken(r)
+}
+
+// UserHandler contains dependencies for handling user-related requests.
+type UserHandler struct {
+	DB             database.Database
+	TokenValidator TokenValidator
+}
 
 // UserInfoHandler handles the request to get user information.
 // It expects the request to have valid JWT tokens in the header, which are validated by middleware.
-func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
+func (uh *UserHandler) UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve username and email from request headers, which were set by ValidateMiddleware
 	username := r.Header.Get("username")
 	email := r.Header.Get("email")

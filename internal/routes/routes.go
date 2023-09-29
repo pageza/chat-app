@@ -17,6 +17,7 @@ import (
 
 func InitializeRoutes(r *mux.Router, rdb *redis.Client, db database.Database) {
 	authHandler := &auth.AuthHandler{DB: db}
+	userHandler := &user.UserHandler{DB: db}
 
 	// Health check route
 	r.HandleFunc("/health", utils.HealthCheckHandler).Methods("GET")
@@ -35,7 +36,7 @@ func InitializeRoutes(r *mux.Router, rdb *redis.Client, db database.Database) {
 	}).Methods("POST")
 
 	// User information route with authentication middleware
-	r.HandleFunc("/userinfo", middleware.AuthMiddleware(user.UserInfoHandler)).Methods("GET")
+	r.HandleFunc("/userinfo", middleware.AuthMiddleware(userHandler.UserInfoHandler)).Methods("GET")
 
 	// Route to check if the user is authenticated
 	r.HandleFunc("/check-auth", middleware.CheckAuth).Methods("GET")

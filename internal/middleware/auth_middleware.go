@@ -16,6 +16,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type Auth interface {
+	ValidateToken(r *http.Request) bool
+}
+
 // AuthMiddleware is a middleware function for handling authentication.
 // It checks for a valid JWT token in the request cookie and proceeds to the next handler if valid.
 // AuthMiddleware is a middleware function for handling authentication.

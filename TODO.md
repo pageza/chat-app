@@ -22,3 +22,54 @@
 - [ ] **Deployment**: Prepare your application for deployment. This might involve setting up a Docker container, writing a Kubernetes configuration, or even just compiling your application for your server's operating system.
 - [ ] **Monitoring and Maintenance**: Once your application is deployed, you'll need to monitor it to ensure it's running smoothly and fix any issues that come up.
 - [ ] **Iterate**: Based on user feedback and monitoring, continue to improve and expand your application.
+
+# Veterans Help App - Feature List
+
+## Authentication and User Management
+
+1. **Sign Up**
+   - User registration with essential fields.
+  
+2. **Login**
+   - Secure user login with JWT.
+  
+3. **Logout**
+   - Securely log out users and invalidate tokens.
+  
+4. **Password Reset** (Optional)
+   - Given your plan to use ID.me for authentication.
+
+5. **User Verification with ID.me**
+   - To verify the veteran status of users.
+
+## Core Features
+
+1. **Support Rooms/Groups**
+   - Topic-based rooms or groups where veterans can join to discuss specific issues.
+  
+2. **Anonymous Support**
+   - Allow users to seek advice or share experiences anonymously within a support room.
+
+3. **Search Functionality**
+   - Enable users to search for topics, support rooms, or specific types of assistance.
+
+4. **Resource Sharing**
+   - A section where users can share or find resources like articles, videos, or contact information for professionals.
+
+5. **Emergency Help Button**
+   - A quick way to get emergency assistance, perhaps directing to a hotline or immediate resources.
+
+6. **Moderation Tools**
+   - Features to report abuse, flag inappropriate content, etc.
+
+7. **User Activity Log**
+   - To keep track of user interactions for moderation and quality assurance.
+
+8. **Notifications**
+   - In-app notifications for updates in support rooms, new resources, etc.
+
+9. **Feedback System**
+   - Allow users to provide feedback on the usefulness of a support room, resource, or advice.
+
+10. **Accessibility Features**
+    - Text-to-speech, language translation, etc., to make the app more accessible.

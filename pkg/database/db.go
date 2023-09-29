@@ -17,6 +17,7 @@ type Database interface {
 	UpdateLastLoginTime(user *models.User) error
 	HandleFailedLoginAttempt(user *models.User) error
 	Where(query interface{}, args ...interface{}) *gorm.DB
+	GetUserByID(userID string) (*models.User, error)
 }
 
 type GormDatabase struct {
@@ -66,4 +67,12 @@ func (g *GormDatabase) HandleFailedLoginAttempt(user *models.User) error {
 
 func (g *GormDatabase) Where(query interface{}, args ...interface{}) *gorm.DB {
 	return g.DB.Where(query, args...)
+}
+
+func (g *GormDatabase) GetUserByID(userID string) (*models.User, error) {
+	var user models.User
+	if err := g.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
 }

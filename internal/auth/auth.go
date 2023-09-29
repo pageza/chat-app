@@ -22,8 +22,8 @@ import (
 )
 
 type AuthHandler struct {
-	DB           database.Database
-	JwtGenerator jwtI.JwtGenerator // Add this line
+	DB         database.Database
+	JwtManager jwtI.JwtManager // Add this line
 }
 
 // RedisClient is an interface representing the methods of the Redis client
@@ -60,12 +60,12 @@ func (a *AuthHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken, refreshToken, err := jwtI.GenerateToken(user)
+	accessToken, refreshToken, err := a.JwtManager.GenerateToken(user)
 	if err != nil {
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusInternalServerError, "Could not log in"))
 		return
 	}
-	jwtI.SetTokenCookie(w, accessToken)
+	a.JwtManager.SetTokenCookie(w, accessToken)
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
@@ -122,7 +122,7 @@ func (a *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Debug: About to call GenerateToken") // Debug print
 	fmt.Printf("Debug: dbUser type: %T, content: %+v\n", dbUser, dbUser)
 
-	accessToken, refreshToken, err := jwtI.GenerateToken(*dbUser)
+	accessToken, refreshToken, err := a.JwtManager.GenerateToken(*dbUser)
 
 	fmt.Println("Debug: GenerateToken called") // Debug print
 
@@ -133,7 +133,7 @@ func (a *AuthHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jwtI.SetTokenCookie(w, accessToken)
+	a.JwtManager.SetTokenCookie(w, accessToken)
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
@@ -168,7 +168,7 @@ func (a *AuthHandler) LogoutHandler(w http.ResponseWriter, r *http.Request, redi
 	}
 
 	// Parse and validate the JWT token
-	token, err := jwtI.ParseToken(actualToken)
+	token, err := a.JwtManager.ParseToken(actualToken)
 	if err != nil {
 		errors.RespondWithError(w, errors.NewAPIError(http.StatusUnauthorized, "Invalid credentials"))
 		return
@@ -202,7 +202,7 @@ func (a *AuthHandler) LogoutHandler(w http.ResponseWriter, r *http.Request, redi
 	}
 
 	// Clear the JWT cookie and send a success response
-	jwtI.ClearTokenCookie(w)
+	a.JwtManager.ClearTokenCookie(w)
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "Logged out successfully")
 }
