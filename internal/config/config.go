@@ -34,14 +34,14 @@ func Initialize() {
 
 	// Load the .env file for sensitive variables
 	// Using a relative path
-	err = godotenv.Load("/home/zach/projects/chat-app/.env") // Adjust the path as needed
+	err = godotenv.Load("/workspaces/chat-app/.env") // Adjust the path as needed
 	if err != nil {
 		logrus.Fatal("Error loading .env file:", err)
 	}
 
 	// Set the path for the config file
 	// Using a relative path
-	viper.SetConfigFile("/home/zach/projects/chat-app/internal/config/config.yaml") // Adjust the path as needed
+	viper.SetConfigFile("/workspaces/chat-app/internal/config/config.yaml") // Adjust the path as needed
 
 	// Read the config file
 	if err := viper.ReadInConfig(); err != nil {

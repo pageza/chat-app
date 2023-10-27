@@ -13,7 +13,7 @@ import (
 
 // Initialize sets up the logging configurations.
 func Initialize() error {
-	logDir := "/home/zach/projects/chat-app/logs"
+	logDir := "/workspaces/chat-app/logs"
 
 	if _, err := os.Stat(logDir); os.IsNotExist(err) {
 		err = os.MkdirAll(logDir, 0755)
