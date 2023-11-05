@@ -18,5 +18,10 @@ RUN apk add --no-cache ca-certificates
 
 COPY --from=builder /app/server /server
 
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8080/ || exit 1
+
 # Run the web service on container startup.
 CMD ["/server"]
